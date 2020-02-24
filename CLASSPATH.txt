@@ -1,0 +1,1 @@
+export CLASSPATH=:/import/ravel/2/z3451444/2020T1/COMP9102

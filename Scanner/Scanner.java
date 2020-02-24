@@ -94,6 +94,9 @@ public final class Scanner {
 
     // skip space ' '
     if (currentChar == ' ') {
+      //DEBUG
+      System.out.println("space found");
+      //END
       currentChar = sourceFile.getNextChar();
     } 
 
@@ -106,10 +109,16 @@ public final class Scanner {
 
       // detemine comment type
       if (peekNextChar == '/'){
+        //DEBUG
+        System.out.println("// found");
+        //END
         isEndOfLineComment = true;
         currentChar = sourceFile.getNextChar();
       }
       else if (peekNextChar == '*'){
+        //DEBUG
+        System.out.println("/* found");
+        //END
         isTraditionalComment = true;
         currentChar = sourceFile.getNextChar();
       }
@@ -127,6 +136,9 @@ public final class Scanner {
         do{
           currentChar = sourceFile.getNextChar();
           if (currentChar == '*' && inspectChar(1) == '/'){
+            //DEBUG
+            System.out.println("*/ found");
+            //END
             isTerminatorsFound = true;
             currentChar = sourceFile.getNextChar();
           }
