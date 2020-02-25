@@ -148,16 +148,46 @@ public final class Scanner {
       case ','://32
         accept();
         return Token.COMMA;
+      //Int or Float
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9':
+        do{
+          //DEBUG
+          System.out.println("digit " + currentChar + " found");
+          //END
+          accept();
+        }while(Character.isDigit(currentChar));
+        if (currentChar == '.' || currentChar == 'e' || currentChar == 'E'){
+          //DEBUG
+          System.out.println("After digit " + currentChar + " is found.");
+          //END
+          // getFraction();
+          return Token.FLOATLITERAL;
+        } else {
+          return Token.INTLITERAL;
+        }
       //Float
       case '.':
+        // getFraction();
+        break;
         //  attempting to recognise a float
+      // String literal
 
     // ....
     case SourceFile.eof:	
-	currentSpelling.append(Token.spell(Token.EOF));
-	return Token.EOF;
+	    currentSpelling.append(Token.spell(Token.EOF));
+	    return Token.EOF;
     default:
-	break;
+      //Q:if reach here, maybe it is not llegal? Report error?
+	    break;
     }
 
     accept(); 
@@ -257,6 +287,10 @@ public final class Scanner {
    if (debug)
      System.out.println(tok);
    return tok;
+   }
+
+   private void getFraction(){
+
    }
 
 }
