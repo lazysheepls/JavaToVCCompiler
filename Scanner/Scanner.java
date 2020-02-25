@@ -102,7 +102,6 @@ public final class Scanner {
 
     // skip comment
     if (currentChar == '/'){
-      int cnt = 1;
       char peekNextChar = inspectChar(1);
       boolean isEndOfLineComment = false;
       boolean isTraditionalComment = false;
@@ -127,7 +126,10 @@ public final class Scanner {
       if (isEndOfLineComment){
         do{
           currentChar = sourceFile.getNextChar();
-        }while(currentChar != '\n' && currentChar != Token.EOF);
+          // //DEBUG
+          // System.out.println("after //: " + currentChar);
+          // //END
+        }while(currentChar != '\n' && currentChar != sourceFile.eof);
       }
 
       // skip traditional comment "/*...*/"
@@ -140,15 +142,22 @@ public final class Scanner {
             System.out.println("*/ found");
             //END
             isTerminatorsFound = true;
-            currentChar = sourceFile.getNextChar();
+            break;
           }
-        }while(currentChar != Token.EOF && isTerminatorsFound == false);
+        }while(currentChar != sourceFile.eof);
         // Error: Unterminated comment
-        if (currentChar == Token.EOF && isTerminatorsFound == false){
+        if (currentChar == sourceFile.eof && isTerminatorsFound == false){
           System.out.println("Error: Unterminated comment");
+        }
+        else if (isTerminatorsFound){
+          currentChar = sourceFile.getNextChar();
         }
       }
     }
+
+    // //DEBUG
+    // System.out.println("---End of this skip----");
+    // //END
   }
 
   public Token getToken() {
