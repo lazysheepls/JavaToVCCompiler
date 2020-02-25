@@ -27,6 +27,7 @@ public final class Scanner {
     debug = false;
 
     // you may initialise your counters for line and column numbers here
+    sourcePos = new SourcePosition();
   }
 
   public void enableDebugging() {
@@ -61,21 +62,95 @@ public final class Scanner {
   // Tokens: separators, operators, literals, identifiers and keyworods
        
     switch (currentChar) {
-       // separators 
-    case '(':
-	accept();
-	return Token.LPAREN;
-    case '.':
-        //  attempting to recognise a float
-
-    case '|':	
-       	accept();
-      	if (currentChar == '|') {
-           accept();
-	   return Token.OROR;
-      	} else {
-	   return Token.ERROR;
+      // operators
+      case '+'://11
+        accept();
+        return Token.PLUS;
+      case '-'://12
+        accept();
+        return Token.MINUS;
+      case '*'://13
+        accept();
+        return Token.MULT;
+      case '/'://14
+        accept();
+        return Token.DIV;
+      case '!'://15 //16
+        accept();
+        if(currentChar == '='){
+          accept();
+          return Token.NOTEQ;
+        } else {
+          return Token.EQ;
         }
+      case '='://17 //18
+        accept();
+        if(currentChar == '='){
+          accept();
+          return Token.EQEQ;
+        } else { 
+          return Token.EQ;
+        }
+      case '<'://19 //20
+        accept();
+        if(currentChar == '='){
+          accept();
+          return Token.LTEQ;
+        } else {
+          return Token.LT;
+        }
+      case '>'://21 //22
+        accept();
+        if(currentChar == '='){
+          accept();
+          return Token.GTEQ;
+        } else {
+          return Token.GT;
+        }
+      case '&'://23 //Error:illegal character
+        accept();
+        if(currentChar == '&'){
+          accept();
+          return Token.ANDAND;
+        } else {
+          return Token.ERROR;
+        }
+      case '|'://24 //Error:illegal character (Example from original code)
+        accept();
+        if (currentChar == '|') {
+          accept();
+          return Token.OROR;
+        } else {
+          return Token.ERROR;
+        }
+      // separators 
+      case '{'://25
+        accept();
+        return Token.LCURLY;
+      case '}'://26
+        accept();
+        return Token.RCURLY;
+      case '('://27
+        accept();
+        return Token.LPAREN;
+      case ')'://28
+        accept();
+        return Token.RPAREN;
+      case '['://29
+        accept();
+        return Token.LBRACKET;
+      case ']'://30
+        accept();
+        return Token.RBRACKET;
+      case ';'://31
+        accept();
+        return Token.SEMICOLON;
+      case ','://32
+        accept();
+        return Token.COMMA;
+      //Float
+      case '.':
+        //  attempting to recognise a float
 
     // ....
     case SourceFile.eof:	
@@ -97,7 +172,7 @@ public final class Scanner {
       //DEBUG
       System.out.println("space found");
       //END
-      currentChar = sourceFile.getNextChar();
+      accept();
     } 
 
     // skip comment
@@ -112,14 +187,14 @@ public final class Scanner {
         System.out.println("// found");
         //END
         isEndOfLineComment = true;
-        currentChar = sourceFile.getNextChar();
+        accept();
       }
       else if (peekNextChar == '*'){
         //DEBUG
         System.out.println("/* found");
         //END
         isTraditionalComment = true;
-        currentChar = sourceFile.getNextChar();
+        accept();
       }
 
       // skip end-of-line comment "//"
@@ -136,7 +211,7 @@ public final class Scanner {
       if(isTraditionalComment){
         boolean isTerminatorsFound = false;
         do{
-          currentChar = sourceFile.getNextChar();
+          accept();
           if (currentChar == '*' && inspectChar(1) == '/'){
             //DEBUG
             System.out.println("*/ found");
@@ -150,7 +225,7 @@ public final class Scanner {
           System.out.println("Error: Unterminated comment");
         }
         else if (isTerminatorsFound){
-          currentChar = sourceFile.getNextChar();
+          accept();
         }
       }
     }
