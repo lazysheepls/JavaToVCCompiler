@@ -18,6 +18,10 @@ public final class Scanner {
   private char currentChar;
   private SourcePosition sourcePos;
 
+  private int line = 1;
+  private int charStart = 1;
+  private int charEnd = 1;
+
 // =========================================================
 
   public Scanner(SourceFile source, ErrorReporter reporter) {
@@ -41,14 +45,45 @@ public final class Scanner {
 
     // you may save the lexeme of the current token incrementally here
     currentSpelling.append(currentChar);
-
+    
+    // you may also increment your line and column counters here
+    charEnd = charStart + currentSpelling.length() - 1;
+    //DEBUG
+    System.out.println("DEBUG: update pos during accept: line-" + line + " charStart-" + charStart + " charEnd-" + charEnd);
+    //END
+    // update sourcePos
+    sourcePos = new SourcePosition(line,charStart,charEnd);
+    // // Update charStart to the next position
+    // charStart = charEnd;
+    
     // get next char
     currentChar = sourceFile.getNextChar();
-    // you may also increment your line and column counters here
+    charStart = charEnd + 1;
   }
 
   // skip and get next character from the source program
   private void skip(){
+    // increase line
+    if (currentChar == '\n'){
+      line = line + 1;
+      charStart = 1;
+      charEnd = 1;
+    }
+    // increase column
+    else if (currentChar == '\t'){
+      charStart = charStart + 8;
+      charEnd = charStart;
+    }
+    else{
+      charStart = charStart + 1;
+      charEnd = charStart;
+    }
+    // //DEBUG
+    // System.out.println("DEBUG: update pos during skip: line-" + line + " charStart-" + charStart + " charEnd-" + charEnd);
+    // //END
+    // update sourcePos
+    sourcePos = new SourcePosition(line,charStart,charEnd);
+
     // get next char
     currentChar = sourceFile.getNextChar();
   }
@@ -206,7 +241,6 @@ public final class Scanner {
 
     boolean isEndOfLineComment = false;
     boolean isTraditionalComment = false;
-    char peekNext = inspectChar(1);
 
     // DEBUG
     System.out.println("DEBUG: Start of Skip");
@@ -216,7 +250,7 @@ public final class Scanner {
     // skip space, and return (QUESTION: how about '\t', which accounts for 8 char?)
     if (currentChar == ' ' || currentChar == '\t' || currentChar == '\n') {
       //DEBUG
-      System.out.println("DEBUG: space found");
+      System.out.println("DEBUG: " + currentChar +" found");
       //END
       skip();
       // Recurse - skip until a valid content is found
@@ -224,7 +258,7 @@ public final class Scanner {
     } 
 
     // determine comment type, return if it not a comment
-    if (currentChar == '/' && peekNext == '/'){
+    if (currentChar == '/' && inspectChar(1) == '/'){
       isEndOfLineComment = true;
       skip(); // point to the 2nd '/'
       skip(); // point to the actual comment
@@ -232,7 +266,7 @@ public final class Scanner {
       System.out.println("DEBUG: // found");
       //END
     }
-    else if (currentChar == '/' && peekNext == '*'){
+    else if (currentChar == '/' && inspectChar(1) == '*'){
       isTraditionalComment = true;
       skip(); // point to the '*'
       skip(); // point to the actual comment
@@ -261,8 +295,7 @@ public final class Scanner {
       boolean isTerminatorPairFound = false;
       while(currentChar != sourceFile.eof){
         // if terminator pair found, exit loop
-        peekNext = inspectChar(1);
-        if(currentChar == '*' && peekNext == '/'){
+        if(currentChar == '*' && inspectChar(1) == '/'){
           //DEBUG
           System.out.println("DEBUG: */ found");
           //END
