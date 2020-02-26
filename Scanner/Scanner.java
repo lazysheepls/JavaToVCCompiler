@@ -27,7 +27,6 @@ public final class Scanner {
     debug = false;
 
     // you may initialise your counters for line and column numbers here
-    sourcePos = new SourcePosition();
   }
 
   public void enableDebugging() {
@@ -35,13 +34,23 @@ public final class Scanner {
   }
 
   // accept gets the next character from the source program.
-
   private void accept() {
+    //DEBUG
+    System.out.println("DEBUG: currentSpelling is going to append " + currentChar);
+    //END
 
+    // you may save the lexeme of the current token incrementally here
+    currentSpelling.append(currentChar);
+
+    // get next char
     currentChar = sourceFile.getNextChar();
+    // you may also increment your line and column counters here
+  }
 
-  // you may save the lexeme of the current token incrementally here
-  // you may also increment your line and column counters here
+  // skip and get next character from the source program
+  private void skip(){
+    // get next char
+    currentChar = sourceFile.getNextChar();
   }
 
   // inspectChar returns the n-th character after currentChar
@@ -59,8 +68,7 @@ public final class Scanner {
   }
 
   private int nextToken() {
-  // Tokens: separators, operators, literals, identifiers and keyworods
-       
+    // Tokens: separators, operators, literals, identifiers and keyworods
     switch (currentChar) {
       // operators
       case '+'://11
@@ -161,13 +169,13 @@ public final class Scanner {
       case '9':
         do{
           //DEBUG
-          System.out.println("digit " + currentChar + " found");
+          System.out.println("DEBUG: digit " + currentChar + " found");
           //END
           accept();
         }while(Character.isDigit(currentChar));
         if (currentChar == '.' || currentChar == 'e' || currentChar == 'E'){
           //DEBUG
-          System.out.println("After digit " + currentChar + " is found.");
+          System.out.println("DEBUG: After digit " + currentChar + " is found.");
           //END
           // getFraction();
           return Token.FLOATLITERAL;
@@ -195,102 +203,125 @@ public final class Scanner {
   }
 
   void skipSpaceAndComments() {
-    // Yang - Last Update - Mon 2030
 
-    // skip space ' '
-    if (currentChar == ' ') {
+    boolean isEndOfLineComment = false;
+    boolean isTraditionalComment = false;
+    char peekNext = inspectChar(1);
+
+    // DEBUG
+    System.out.println("DEBUG: Start of Skip");
+    System.out.println("DEBUG: Next skip inspect is " + currentChar);
+    // END
+
+    // skip space, and return (QUESTION: how about '\t', which accounts for 8 char?)
+    if (currentChar == ' ' || currentChar == '\t' || currentChar == '\n') {
       //DEBUG
-      System.out.println("space found");
+      System.out.println("DEBUG: space found");
       //END
-      accept();
+      skip();
+      // Recurse - skip until a valid content is found
+      skipSpaceAndComments();
     } 
 
-    // skip comment
-    if (currentChar == '/'){
-      char peekNextChar = inspectChar(1);
-      boolean isEndOfLineComment = false;
-      boolean isTraditionalComment = false;
+    // determine comment type, return if it not a comment
+    if (currentChar == '/' && peekNext == '/'){
+      isEndOfLineComment = true;
+      skip(); // point to the 2nd '/'
+      skip(); // point to the actual comment
+      //DEBUG
+      System.out.println("DEBUG: // found");
+      //END
+    }
+    else if (currentChar == '/' && peekNext == '*'){
+      isTraditionalComment = true;
+      skip(); // point to the '*'
+      skip(); // point to the actual comment
+      //DEBUG
+      System.out.println("DEBUG: /* found");
+      //END
+    }
+    else { // Not a comment, return 
+      return;
+    }
 
-      // detemine comment type
-      if (peekNextChar == '/'){
-        //DEBUG
-        System.out.println("// found");
-        //END
-        isEndOfLineComment = true;
-        accept();
+    // skip the end-of-line comment
+    if (isEndOfLineComment){
+      while(currentChar != '\n' && currentChar != sourceFile.eof){
+        skip();
       }
-      else if (peekNextChar == '*'){
-        //DEBUG
-        System.out.println("/* found");
-        //END
-        isTraditionalComment = true;
-        accept();
-      }
-
-      // skip end-of-line comment "//"
-      if (isEndOfLineComment){
-        do{
-          currentChar = sourceFile.getNextChar();
-          // //DEBUG
-          // System.out.println("after //: " + currentChar);
-          // //END
-        }while(currentChar != '\n' && currentChar != sourceFile.eof);
-      }
-
-      // skip traditional comment "/*...*/"
-      if(isTraditionalComment){
-        boolean isTerminatorsFound = false;
-        do{
-          accept();
-          if (currentChar == '*' && inspectChar(1) == '/'){
-            //DEBUG
-            System.out.println("*/ found");
-            //END
-            isTerminatorsFound = true;
-            break;
-          }
-        }while(currentChar != sourceFile.eof);
-        // Error: Unterminated comment
-        if (currentChar == sourceFile.eof && isTerminatorsFound == false){
-          System.out.println("Error: Unterminated comment");
-        }
-        else if (isTerminatorsFound){
-          accept();
-        }
+      // Recurse - skip until a valid content is found
+      if (currentChar != sourceFile.eof){
+        skip();
+        skipSpaceAndComments();
       }
     }
 
-    // //DEBUG
-    // System.out.println("---End of this skip----");
-    // //END
+    // skip the traditional comment
+    if(isTraditionalComment){
+      boolean isTerminatorPairFound = false;
+      while(currentChar != sourceFile.eof){
+        // if terminator pair found, exit loop
+        peekNext = inspectChar(1);
+        if(currentChar == '*' && peekNext == '/'){
+          //DEBUG
+          System.out.println("DEBUG: */ found");
+          //END
+          isTerminatorPairFound = true;
+          skip(); // point to the 2nd terminator '/'
+          skip(); // point to the next char after the comment
+          break;
+        }
+        //DEBUG
+        System.out.println("DEBUG: in /* */, we skipped " + currentChar);
+        //END
+        // have not reach the end of comment, skip more
+        skip();
+      }
+      // Error: Unterminated comment, return
+      if (isTerminatorPairFound == false){
+        System.out.println("Error: unterminated comment");
+        return;
+      }
+      // Recurse - skip until a valid content is found
+      if (currentChar != sourceFile.eof && isTerminatorPairFound){
+        skip();
+        skipSpaceAndComments();
+      }
+    }
   }
-
+  
   public Token getToken() {
     Token tok;
     int kind;
 
+    currentSpelling = new StringBuffer("");
+    sourcePos = new SourcePosition();
+
     // skip white space and comments
+    skipSpaceAndComments();
 
-   skipSpaceAndComments();
+    //DEBUG
+    System.out.println("DEBUG: End of Skip");
+    //END
 
-   currentSpelling = new StringBuffer("");
+    // You must record the position of the current token somehow
 
-   sourcePos = new SourcePosition();
+    kind = nextToken();
 
-   // You must record the position of the current token somehow
+    tok = new Token(kind, currentSpelling.toString(), sourcePos);
 
-   kind = nextToken();
-
-   tok = new Token(kind, currentSpelling.toString(), sourcePos);
-
-   // * do not remove these three lines
-   if (debug)
-     System.out.println(tok);
-   return tok;
+    // * do not remove these three lines
+    if (debug)
+      System.out.println(tok);
+    return tok;
    }
 
-   private void getFraction(){
+   // Custom functions
+  private void getFraction(){
 
-   }
+  }
 
+  private void getExponent(){
+    
+  }
 }
