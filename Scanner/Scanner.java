@@ -19,8 +19,7 @@ public final class Scanner {
   private SourcePosition sourcePos;
 
   private int line = 1;
-  private int charStart = 1;
-  private int charEnd = 1;
+  private int column = 1;
 
 // =========================================================
 
@@ -47,18 +46,14 @@ public final class Scanner {
     currentSpelling.append(currentChar);
     
     // you may also increment your line and column counters here
-    charEnd = charStart + currentSpelling.length() - 1;
+    // IMPORTANT Yang - For accept, we probabaly should not handle charEnd here, only after the token was fully taken 
     //DEBUG
-    System.out.println("DEBUG: update pos during accept: line-" + line + " charStart-" + charStart + " charEnd-" + charEnd);
+    System.out.println("DEBUG: update pos during accept: line-" + line + " column-" + column);
     //END
-    // update sourcePos
-    sourcePos = new SourcePosition(line,charStart,charEnd);
-    // // Update charStart to the next position
-    // charStart = charEnd;
     
     // get next char
     currentChar = sourceFile.getNextChar();
-    charStart = charEnd + 1;
+    column = column + 1;
   }
 
   // skip and get next character from the source program
@@ -66,23 +61,18 @@ public final class Scanner {
     // increase line
     if (currentChar == '\n'){
       line = line + 1;
-      charStart = 1;
-      charEnd = 1;
+      column = 1;
     }
     // increase column
     else if (currentChar == '\t'){
-      charStart = charStart + 8;
-      charEnd = charStart;
+      column = column + 8;
     }
     else{
-      charStart = charStart + 1;
-      charEnd = charStart;
+      column = column + 1;
     }
     // //DEBUG
-    // System.out.println("DEBUG: update pos during skip: line-" + line + " charStart-" + charStart + " charEnd-" + charEnd);
+    // System.out.println("DEBUG: update pos during skip: line-" + line + " column-" + column + " charEnd-" + charEnd);
     // //END
-    // update sourcePos
-    sourcePos = new SourcePosition(line,charStart,charEnd);
 
     // get next char
     currentChar = sourceFile.getNextChar();
@@ -227,9 +217,10 @@ public final class Scanner {
     // ....
     case SourceFile.eof:	
 	    currentSpelling.append(Token.spell(Token.EOF));
+      column = column + 1; // EOF still take 1 position
 	    return Token.EOF;
     default:
-      //Q:if reach here, maybe it is not llegal? Report error?
+      //QUESTION: if reach here, maybe it is not llegal? Report error?
 	    break;
     }
 
@@ -247,7 +238,7 @@ public final class Scanner {
     System.out.println("DEBUG: Next skip inspect is " + currentChar);
     // END
 
-    // skip space, and return (QUESTION: how about '\t', which accounts for 8 char?)
+    // skip space, and return
     if (currentChar == ' ' || currentChar == '\t' || currentChar == '\n') {
       //DEBUG
       System.out.println("DEBUG: " + currentChar +" found");
@@ -338,8 +329,23 @@ public final class Scanner {
     //END
 
     // You must record the position of the current token somehow
+    //...
 
     kind = nextToken();
+
+    // Update source location
+    /* math: how to calculate charStart (normal case)
+     * e.g 1 2 3 4 5
+     *     / /   n
+     *             ^
+     *          column when finish nextToken()
+     * Hence,
+     * charEnd = column - 1
+     * charStart = column - token.length + 1 - 1
+     */
+    int charStart = column - currentSpelling.length();
+    int charEnd = column - 1;
+    sourcePos = new SourcePosition(line,charStart,charEnd);
 
     tok = new Token(kind, currentSpelling.toString(), sourcePos);
 
