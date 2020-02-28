@@ -182,7 +182,7 @@ public final class Scanner {
       case ','://32
         accept();
         return Token.COMMA;
-      //Reversed keywords
+      //Reversed keywords or FALSE
       case 'b':
       case 'c':
       case 'e':
@@ -192,7 +192,11 @@ public final class Scanner {
       case 'v':
       case 'w':
         token = getReserveKeyword();
-        return token; // Could be one of the KEYWORD or Token.ERROR;
+        return token; // Could be either KEYWORD or Token.FALSE
+      // TRUE or Identifier  
+      case 't':
+        token = getTrueOrFalse();
+        return token; // Could be either Token.TRUE of Token.ID
       //Int or Float
       case '0':
       case '1':
@@ -222,23 +226,31 @@ public final class Scanner {
         return token;
         //  attempting to recognise a float
       // String literal
-
-    // ....
-    case SourceFile.eof:	
-	    currentSpelling.append(Token.spell(Token.EOF));
-      column = column + 1; // EOF still take 1 position
-	    return Token.EOF;
-    default:
-      //QUESTION: if reach here, maybe it is not llegal? Report error?
-	    break;
+      case '"':
+        do{
+          accept();
+        }while(currentChar != '"' && currentChar != '\n' && currentChar != sourceFile.eof);
+        return Token.STRINGLITERAL;
+      // ....
+      case SourceFile.eof:	
+        currentSpelling.append(Token.spell(Token.EOF));
+        column = column + 1; // EOF still take 1 position
+        return Token.EOF;
+      default:
+        // Identifier
+        if(isIdentiferLetter(currentChar)){
+            token = getIdentifier();
+            return token;
+        }
+        //QUESTION: if reach here, maybe it is not llegal? Report error?
+        return Token.ERROR;
     }
 
-    accept(); 
-    return Token.ERROR;
+    // accept(); 
+    // return Token.ERROR;
   }
 
   /** Float Detetion */
-
   // Determine if the '.' followed by fraction, or should it terminate
   private int determineDot(){
     if(Character.isDigit(inspectChar(1))){
@@ -303,19 +315,43 @@ public final class Scanner {
       return Token.ERROR;
     }
   }
-
-  /** Reserved Keywords */
-  private boolean isCapitalLetter(char charCanidate){
-    return charCanidate >= 'A' && charCanidate <= 'Z';
+  /** True Or False */
+  // Assumption:
+  // When entering, the first letter is either 't' or 'f'
+  private int getTrueOrFalse(){
+    int token;
+    while(Character.isLowerCase(currentChar)){
+      accept();
+    }
+    switch(currentSpelling.toString()){
+      case "true":
+      case "false":
+        return Token.BOOLEANLITERAL;
+      default: // "true" and "false" not found
+        token = getIdentifier();
+        return token;
+    }
   }
-  private boolean isSmallLetter(char charCanidate){
-    return charCanidate >= 'a' && charCanidate <= 'z';
+  /** Identifiers */
+  // Check if char is identifier usable letter (include A-Z,a-z,'_')
+  private boolean isIdentiferLetter(char charCanidate){
+    return Character.isLetter(charCanidate) || charCanidate == '_';
   }
 
   // Assumption:
+  // When entering, the first letter is a valid identifier letter
+  private int getIdentifier(){
+    while(isIdentiferLetter(currentChar) || Character.isDigit(currentChar)){
+      accept();
+    }
+    return Token.ID;
+  }
+  /** Reserved Keywords */
+  // Assumption:
   // When entering, the first letter is a valid keyword start letter
   private int getReserveKeyword(){
-    while(isSmallLetter(currentChar)){
+    int token;
+    while(Character.isLowerCase(currentChar)){ // a - z
       accept();
     }
     switch(currentSpelling.toString()){
@@ -341,8 +377,14 @@ public final class Scanner {
         return Token.VOID;
       case "while": //10
         return Token.WHILE;
-      default:
-        return Token.ERROR;
+      default: // Keyword not found
+        if(currentSpelling.charAt(0) == 'f'){ // word start with 'f', could be "false"
+          token = getTrueOrFalse();
+        }
+        else{ // word could be an identifier
+          token = getIdentifier();
+        }
+        return token;
     }
   }
 
