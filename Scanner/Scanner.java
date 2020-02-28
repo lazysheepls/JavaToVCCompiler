@@ -114,7 +114,7 @@ public final class Scanner {
           accept();
           return Token.NOTEQ;
         } else {
-          return Token.EQ;
+          return Token.NOT;
         }
       case '='://17 //18
         accept();
@@ -192,25 +192,22 @@ public final class Scanner {
       case '7':
       case '8':
       case '9':
-        do{
-          //DEBUG
-          System.out.println("DEBUG: digit " + currentChar + " found");
-          //END
-          accept();
-        }while(Character.isDigit(currentChar));
-        if (currentChar == '.' || currentChar == 'e' || currentChar == 'E'){
-          //DEBUG
-          System.out.println("DEBUG: After digit " + currentChar + " is found.");
-          //END
-          // getFraction();
-          return Token.FLOATLITERAL;
-        } else {
+        getDigitsPlus();
+        if (currentChar == '.'){
+          int token = determineDot();
+          return token; // Could be Token.FLOATLITERAL or Token.ERROR
+        }
+        else if (currentChar == 'e' || currentChar == 'E'){
+          int token = getExponent(); // Could be Token.FLOATLITERAL or Token.ERROR
+          return token;
+        }
+        else {
           return Token.INTLITERAL;
         }
       //Float
       case '.':
-        // getFraction();
-        break;
+        int token = determineDot(); // Could be Token.FLOATLITERAL or Token.ERROR
+        return token;
         //  attempting to recognise a float
       // String literal
 
@@ -226,6 +223,73 @@ public final class Scanner {
 
     accept(); 
     return Token.ERROR;
+  }
+
+  /** Float Detetion */
+
+  // Determine if the '.' followed by fraction, or should it terminate
+  private int determineDot(){
+    if(Character.isDigit(inspectChar(1))){
+      accept();
+      getFraction();
+      return Token.FLOATLITERAL;
+    }
+    else if (inspectChar(1) == 'E' || inspectChar(1) == 'e'){
+      accept();
+      getExponent();
+      return Token.FLOATLITERAL;
+    }
+    else{
+      // Can dot terminate the float at this point?
+      for(int i=0;i<currentSpelling.length();i++){
+        char c = currentSpelling.charAt(i);
+        if (Character.isDigit(c)) {
+          accept();
+          return Token.FLOATLITERAL;
+        }
+      }
+      return Token.ERROR;
+    }
+  }
+
+  // Expr: digit+
+  private void getDigitsPlus(){
+    while(Character.isDigit(currentChar)){
+      accept();
+    }
+  }
+  
+  // Assumption:
+  // When entering, there must be at least one digit after the '.'
+  private void getFraction(){
+    getDigitsPlus();
+    if(currentChar == 'E' || currentChar == 'e'){
+      getExponent();
+    }
+  }
+
+  // Assumption:
+  // When entering, there must be 'E' or 'e' in front
+  // return Token.FLOATLITERAL or Token.ERROR
+  private int getExponent(){
+    accept(); // accept the 'E' or 'e'
+    if(currentChar == '+' || currentChar == '-'){
+      accept();
+      if(Character.isDigit(currentChar)){
+        getDigitsPlus();
+        return Token.FLOATLITERAL;
+      }
+      else{
+        return Token.ERROR;
+      }
+    }
+    else if (Character.isDigit(currentChar)){
+      getDigitsPlus();
+      return Token.FLOATLITERAL;
+    }
+    else{
+      return Token.ERROR;
+    }
   }
 
   void skipSpaceAndComments() {
@@ -354,13 +418,4 @@ public final class Scanner {
       System.out.println(tok);
     return tok;
    }
-
-   // Custom functions
-  private void getFraction(){
-
-  }
-
-  private void getExponent(){
-    
-  }
 }
