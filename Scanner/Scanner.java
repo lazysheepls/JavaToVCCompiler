@@ -93,6 +93,7 @@ public final class Scanner {
   }
 
   private int nextToken() {
+    int token;
     // Tokens: separators, operators, literals, identifiers and keyworods
     switch (currentChar) {
       // operators
@@ -181,6 +182,17 @@ public final class Scanner {
       case ','://32
         accept();
         return Token.COMMA;
+      //Reversed keywords
+      case 'b':
+      case 'c':
+      case 'e':
+      case 'f':
+      case 'i':
+      case 'r':
+      case 'v':
+      case 'w':
+        token = getReserveKeyword();
+        return token; // Could be one of the KEYWORD or Token.ERROR;
       //Int or Float
       case '0':
       case '1':
@@ -194,11 +206,11 @@ public final class Scanner {
       case '9':
         getDigitsPlus();
         if (currentChar == '.'){
-          int token = determineDot();
+          token = determineDot();
           return token; // Could be Token.FLOATLITERAL or Token.ERROR
         }
         else if (currentChar == 'e' || currentChar == 'E'){
-          int token = getExponent(); // Could be Token.FLOATLITERAL or Token.ERROR
+          token = getExponent(); // Could be Token.FLOATLITERAL or Token.ERROR
           return token;
         }
         else {
@@ -206,7 +218,7 @@ public final class Scanner {
         }
       //Float
       case '.':
-        int token = determineDot(); // Could be Token.FLOATLITERAL or Token.ERROR
+        token = determineDot(); // Could be Token.FLOATLITERAL or Token.ERROR
         return token;
         //  attempting to recognise a float
       // String literal
@@ -292,6 +304,49 @@ public final class Scanner {
     }
   }
 
+  /** Reserved Keywords */
+  private boolean isCapitalLetter(char charCanidate){
+    return charCanidate >= 'A' && charCanidate <= 'Z';
+  }
+  private boolean isSmallLetter(char charCanidate){
+    return charCanidate >= 'a' && charCanidate <= 'z';
+  }
+
+  // Assumption:
+  // When entering, the first letter is a valid keyword start letter
+  private int getReserveKeyword(){
+    while(isSmallLetter(currentChar)){
+      accept();
+    }
+    switch(currentSpelling.toString()){
+      case "boolean": //0
+        return Token.BOOLEAN;
+      case "break": //1
+        return Token.BREAK;
+      case "continue": //2
+        return Token.CONTINUE;
+      case "else": //3
+        return Token.ELSE;
+      case "float": //4
+        return Token.FLOAT;
+      case "for": //5
+        return Token.FOR;
+      case "if": //6
+        return Token.IF;
+      case "int": //7
+        return Token.INT;
+      case "return": //8
+        return Token.RETURN;
+      case "void": //9
+        return Token.VOID;
+      case "while": //10
+        return Token.WHILE;
+      default:
+        return Token.ERROR;
+    }
+  }
+
+  /** Skip space and comment */
   void skipSpaceAndComments() {
 
     boolean isEndOfLineComment = false;
