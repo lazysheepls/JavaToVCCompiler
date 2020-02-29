@@ -33,6 +33,7 @@ public final class Scanner {
   }
   private ErrorType globalErrorType = ErrorType.NO_ERROR;
 
+  List<Character> escapeCharacters = Arrays.asList('\b', '\f', '\n', '\r', '\t', '\'','\"','\\');
   List<String> escapeStrings = Arrays.asList("\\b", "\\f", "\\n", "\\r", "\\t", "\\\'","\\\"","\\\\");
 // =========================================================
 
@@ -51,11 +52,18 @@ public final class Scanner {
 
   // accept gets the next character from the source program.
   private void accept() {
+    //DEBUG
+    System.out.println("DEBUG: currentSpelling is going to append " + currentChar);
+    //END
+
     // you may save the lexeme of the current token incrementally here
     currentSpelling.append(currentChar);
     
     // you may also increment your line and column counters here
     // IMPORTANT Yang - For accept, we probabaly should not handle charEnd here, only after the token was fully taken 
+    //DEBUG
+    System.out.println("DEBUG: update pos during accept: line-" + line + " column-" + column);
+    //END
     
     // get next char
     currentChar = sourceFile.getNextChar();
@@ -76,6 +84,9 @@ public final class Scanner {
     else{
       column = column + 1;
     }
+    // //DEBUG
+    // System.out.println("DEBUG: update pos during skip: line-" + line + " column-" + column + " charEnd-" + charEnd);
+    // //END
 
     // get next char
     currentChar = sourceFile.getNextChar();
@@ -246,6 +257,9 @@ public final class Scanner {
         //QUESTION: if reach here, maybe it is not llegal? Report error?
         return Token.ERROR;
     }
+
+    // accept(); 
+    // return Token.ERROR;
   }
   /** Error Report*/
   /** String Literals */
@@ -262,6 +276,9 @@ public final class Scanner {
     }
   }
   void skipInString(){
+    //DEBUG
+    System.out.println("DEBUG: skip " + currentChar + " in string");
+    //END
     if (currentChar == '\n'){
       line = line + 1;
       column = 1;
@@ -280,6 +297,9 @@ public final class Scanner {
     int stringStartColumn = column;
     boolean illegalEscapeFound = false;
     numberOfEscapeChar = 0;
+    //DEBUG
+    System.out.println("DEBUG: Start detecting string");
+    //END
 
     // skip the string start double qoute '"'
     skipInString();
@@ -287,12 +307,22 @@ public final class Scanner {
     boolean isStringEnd = false;
     String evaluateBuffer = "";
     while(!isStringEnd && currentChar != sourceFile.eof){
+      //DEBUG
+      System.out.println("DEBUG: Inspecting " + currentChar + " in string");
+      //END
+
       if (currentChar != '\\' && currentChar != '\"' && currentChar != '\n'){
         accept();
       }
       else if (currentChar == '\\'){
         evaluateBuffer = Character.toString(currentChar).concat(Character.toString(inspectChar(1))); // two character combined
+        //DEBUG
+        System.out.println("Evaluated escape string is " + evaluateBuffer);
+        //END
         if(escapeStrings.contains(evaluateBuffer)){ // valid escape string found
+          //DEBUG
+          System.out.println("currentSpelling is " + currentSpelling);
+          //END
           if (evaluateBuffer.equals("\\b")){
             replaceEscapeCharInString('\b');
           }
@@ -321,6 +351,9 @@ public final class Scanner {
           skipInString();
           skipInString();
         } else { // Error: illegal escape found
+          //DEBUG
+          System.out.println("DEBUG: illegal escape character found.");
+          //END 
           // Set global error type
           globalErrorType = ErrorType.ILLEGAL_ESCAPE_CHAR;
           // Error tokenName - two character
@@ -335,6 +368,9 @@ public final class Scanner {
         }
       }
       else if (currentChar == '\n'){ //Error: unterminated string found
+        //DEBUG
+        System.out.println("DEBUG: In string, \n found.");
+        //END 
         // Set global error type
         globalErrorType = ErrorType.UNTERMINATED_STRING;
         errorTokenName = currentSpelling.toString();
@@ -351,6 +387,85 @@ public final class Scanner {
         skipInString();
       }
     }
+    // // Old
+    // while(currentChar != '\"' && currentChar != sourceFile.eof){
+    //   //DEBUG
+    //   System.out.println("DEBUG: Inspecting " + currentChar + " in string");
+    //   //END
+    //   if (!escapeCharacters.contains(currentChar)){
+    //     accept();
+    //   } else {// escape characters found
+    //     //DEBUG
+    //     System.out.println("DEBUG: escape char " + currentChar + "  found in string");
+    //     //END
+    //     switch(currentChar){
+    //       case '\b':
+    //       case '\f':
+    //       case '\r':
+    //       case '\t':
+    //       case '\'':
+    //         accept();
+    //         break;
+    //       case '\\':
+    //         //DEBUG
+    //         System.out.println("DEBUG: In string, \\ found.");
+    //         //END 
+    //         switch(inspectChar(1)){
+    //           case 'b':
+    //             //TODO - Need to replace spelling
+    //           case 'f':
+    //             //TODO - Need to replace spelling
+    //           case 'r':
+    //             //TODO - Need to replace spelling
+    //           case 't':
+    //             //TODO - Need to replace spelling
+    //           case '\'':
+    //             //TODO - Need to replace spelling
+    //           case '\"':
+    //             //TODO - Need to replace spelling
+    //           case '\\':
+    //             //TODO - Need to replace spelling
+    //             break;
+    //           default:
+    //             illegalEscapeFound = true;
+    //             break;
+    //         }
+    //         // (inspectChar(1) != '\\')
+    //         if (illegalEscapeFound) {// Error: illegal escape character found
+    //           //DEBUG
+    //           System.out.println("DEBUG: illegal escape character found.");
+    //           //END 
+    //           // Set global error type
+    //           globalErrorType = ErrorType.ILLEGAL_ESCAPE_CHAR;
+    //           // Error tokenName - two character
+    //           errorTokenName = Character.toString(currentChar).concat(Character.toString(inspectChar(1)));
+    //           // Error sourcePosition - from the start of the string to where the '\' is found
+    //           errorSourcePosition = new SourcePosition(line,stringStartColumn,column);
+    //           // Set error message
+    //           String errorMessage = "%: illegal escape character";
+    //           errorReporter.reportError(errorMessage, errorTokenName, errorSourcePosition);
+    //         }
+    //         accept();
+    //         break;
+    //       case '\n':  // Error: unterminated string, stop reading string
+    //         //DEBUG
+    //         System.out.println("DEBUG: In string, \n found.");
+    //         //END 
+    //         // Set global error type
+    //         globalErrorType = ErrorType.UNTERMINATED_STRING;
+    //         errorTokenName = currentSpelling.toString();
+    //         // Error sourcePosition - from the start of the string to the start of the string
+    //         errorSourcePosition = new SourcePosition(stringStartLine,stringStartColumn,stringStartColumn);
+    //         // Set error message
+    //         String errorMessage = "%: unterminated string";
+    //         errorReporter.reportError(errorMessage, errorTokenName, errorSourcePosition);
+    //         return;
+    //         // NOTE: Cannot skip or accept before tok is return to vc.java
+    //     }
+    //   }
+    // }
+    // // string close " found, skip
+    // skipInString();
   }
   /** Float Detetion */
   // Determine if the '.' followed by fraction, or should it terminate
@@ -426,6 +541,30 @@ public final class Scanner {
       return Token.ERROR;
     }
   }
+  // OLD
+  // private int getExponent(){
+  //   string accpetCounter = 1;
+  //   accept(); // accept the 'E' or 'e'
+  //   if(currentChar == '+' || currentChar == '-'){
+  //     accpetCounter++;
+  //     accept();
+  //     if(Character.isDigit(currentChar)){
+  //       getDigitsPlus();
+  //       return Token.FLOATLITERAL;
+  //     }
+  //     else{
+  //       accpetCounter = 0;
+  //       return Token.ERROR;
+  //     }
+  //   }
+  //   else if (Character.isDigit(currentChar)){
+  //     getDigitsPlus();
+  //     return Token.FLOATLITERAL;
+  //   }
+  //   else{
+  //     return Token.ERROR;
+  //   }
+  // }
   /** True Or False */
   // Assumption:
   // When entering, the first letter is either 't' or 'f'
@@ -506,8 +645,16 @@ public final class Scanner {
     boolean isEndOfLineComment = false;
     boolean isTraditionalComment = false;
 
+    // DEBUG
+    System.out.println("DEBUG: Start of Skip");
+    System.out.println("DEBUG: Next skip inspect is " + currentChar);
+    // END
+
     // skip space, and return
     if (currentChar == ' ' || currentChar == '\t' || currentChar == '\n') {
+      //DEBUG
+      System.out.println("DEBUG: " + currentChar +" found");
+      //END
       skip();
       // Recurse - skip until a valid content is found
       skipSpaceAndComments();
@@ -520,6 +667,9 @@ public final class Scanner {
       isEndOfLineComment = true;
       skip(); // point to the 2nd '/'
       skip(); // point to the actual comment
+      //DEBUG
+      System.out.println("DEBUG: // found");
+      //END
     }
     else if (currentChar == '/' && inspectChar(1) == '*'){
       commentStartColumn = column;
@@ -527,6 +677,9 @@ public final class Scanner {
       isTraditionalComment = true;
       skip(); // point to the '*'
       skip(); // point to the actual comment
+      //DEBUG
+      System.out.println("DEBUG: /* found");
+      //END
     }
     else { // Not a comment, return 
       return;
@@ -550,11 +703,17 @@ public final class Scanner {
       while(currentChar != sourceFile.eof){
         // if terminator pair found, exit loop
         if(currentChar == '*' && inspectChar(1) == '/'){
+          //DEBUG
+          System.out.println("DEBUG: */ found");
+          //END
           isTerminatorPairFound = true;
           skip(); // point to the 2nd terminator '/'
           skip(); // point to the next char after the comment
           break;
         }
+        //DEBUG
+        System.out.println("DEBUG: in /* */, we skipped " + currentChar);
+        //END
         // have not reach the end of comment, skip more
         skip();
       }
@@ -589,6 +748,10 @@ public final class Scanner {
     // skip white space and comments
     skipSpaceAndComments();
 
+    //DEBUG
+    System.out.println("DEBUG: End of Skip");
+    //END
+
     // reset global error type
     globalErrorType = ErrorType.NO_ERROR;
 
@@ -610,6 +773,9 @@ public final class Scanner {
     int charStart;
     int charEnd;
     if (kind == Token.STRINGLITERAL){
+      //DEBUG
+      System.out.println("DEBUG: number of escape char is " + numberOfEscapeChar);
+      //END
       if (globalErrorType == ErrorType.UNTERMINATED_STRING){
         charStart = column - currentSpelling.length() - numberOfEscapeChar - 1; // Need to set the opening double qoute as start location
       }else{
