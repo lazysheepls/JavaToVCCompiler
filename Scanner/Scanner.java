@@ -289,12 +289,13 @@ public final class Scanner {
     // skip the string start double qoute '"'
     skipInString();
 
-    while(currentChar != '"' && currentChar != sourceFile.eof){
+    while(currentChar != '\"' && currentChar != sourceFile.eof){
       //DEBUG
       System.out.println("DEBUG: Inspecting " + currentChar + " in string");
       //END
-      accept();
-      if(escapeCharacters.contains(currentChar)){// escape characters found
+      if (!escapeCharacters.contains(currentChar)){
+        accept();
+      } else {// escape characters found
         //DEBUG
         System.out.println("DEBUG: escape char " + currentChar + "  found in string");
         //END
@@ -304,7 +305,7 @@ public final class Scanner {
           case '\r':
           case '\t':
           case '\'':
-          case '\"':
+          // case '\"':
             accept();
             break;
           case '\\':
@@ -344,6 +345,8 @@ public final class Scanner {
         }
       }
     }
+    // string close " found, skip
+    skipInString();
   }
   /** Float Detetion */
   // Determine if the '.' followed by fraction, or should it terminate
@@ -605,7 +608,11 @@ public final class Scanner {
     int charStart;
     int charEnd;
     if (kind == Token.STRINGLITERAL){
-      charStart = column - currentSpelling.length() - 1; // Need to set the opening double qoute as start location
+      if (globalErrorType == ErrorType.UNTERMINATED_STRING){
+        charStart = column - currentSpelling.length() - 1; // Need to set the opening double qoute as start location
+      }else{
+        charStart = column - currentSpelling.length() - 2;
+      }
     }else{
       charStart = column - currentSpelling.length();
     }
