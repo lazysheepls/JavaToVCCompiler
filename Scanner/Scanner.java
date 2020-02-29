@@ -22,6 +22,8 @@ public final class Scanner {
   private int line = 1;
   private int column = 1;
 
+  private int numberOfEscapeChar = 0;
+
   private enum ErrorType{
     NO_ERROR,
     ILLEGAL_CHARACTER,
@@ -32,7 +34,7 @@ public final class Scanner {
   private ErrorType globalErrorType = ErrorType.NO_ERROR;
 
   List<Character> escapeCharacters = Arrays.asList('\b', '\f', '\n', '\r', '\t', '\'','\"','\\');
-
+  List<String> escapeStrings = Arrays.asList("\\b", "\\f", "\\n", "\\r", "\\t", "\\\'","\\\"","\\\\");
 // =========================================================
 
   public Scanner(SourceFile source, ErrorReporter reporter) {
@@ -238,7 +240,7 @@ public final class Scanner {
         return token;
         //  attempting to recognise a float
       // String literal
-      case '"':
+      case '\"':
         getStringLiteral();
         return Token.STRINGLITERAL;
       // ....
@@ -261,6 +263,18 @@ public final class Scanner {
   }
   /** Error Report*/
   /** String Literals */
+  void replaceEscapeCharInString(char replacement){
+    numberOfEscapeChar = numberOfEscapeChar + 1; // Need to use this info to calculate currentSpelling start position later
+    if (currentSpelling.length() == 0){
+      currentSpelling.append(replacement);
+    } else{
+      if (currentSpelling.charAt(currentSpelling.length() - 1) == '\\'){
+        currentSpelling.setCharAt(currentSpelling.length() - 1, replacement);
+      } else{
+        currentSpelling.append(replacement);
+      }
+    }
+  }
   void skipInString(){
     //DEBUG
     System.out.println("DEBUG: skip " + currentChar + " in string");
@@ -281,72 +295,177 @@ public final class Scanner {
     SourcePosition errorSourcePosition = new SourcePosition();
     int stringStartLine = line;
     int stringStartColumn = column;
-    
+    boolean illegalEscapeFound = false;
+    numberOfEscapeChar = 0;
     //DEBUG
     System.out.println("DEBUG: Start detecting string");
     //END
 
     // skip the string start double qoute '"'
     skipInString();
-
-    while(currentChar != '\"' && currentChar != sourceFile.eof){
+    // New
+    boolean isStringEnd = false;
+    String evaluateBuffer = "";
+    while(!isStringEnd && currentChar != sourceFile.eof){
       //DEBUG
       System.out.println("DEBUG: Inspecting " + currentChar + " in string");
       //END
-      if (!escapeCharacters.contains(currentChar)){
+
+      if (currentChar != '\\' && currentChar != '\"' && currentChar != '\n'){
         accept();
-      } else {// escape characters found
+      }
+      else if (currentChar == '\\'){
+        evaluateBuffer = Character.toString(currentChar).concat(Character.toString(inspectChar(1))); // two character combined
         //DEBUG
-        System.out.println("DEBUG: escape char " + currentChar + "  found in string");
+        System.out.println("Evaluated escape string is " + evaluateBuffer);
         //END
-        switch(currentChar){
-          case '\b':
-          case '\f':
-          case '\r':
-          case '\t':
-          case '\'':
-          // case '\"':
-            accept();
-            break;
-          case '\\':
-            //DEBUG
-            System.out.println("DEBUG: In string, \\ found.");
-            //END 
-            if (inspectChar(1) != '\\') {// Error: illegal escape character found
-              //DEBUG
-              System.out.println("DEBUG: illegal escape character found.");
-              //END 
-              // Set global error type
-              globalErrorType = ErrorType.ILLEGAL_ESCAPE_CHAR;
-              // Error tokenName - two character
-              errorTokenName = Character.toString(currentChar).concat(Character.toString(inspectChar(1)));
-              // Error sourcePosition - from the start of the string to where the '\' is found
-              errorSourcePosition = new SourcePosition(line,stringStartColumn,column);
-              // Set error message
-              String errorMessage = "%: illegal escape character";
-              errorReporter.reportError(errorMessage, errorTokenName, errorSourcePosition);
-            }
-            accept();
-            break;
-          case '\n':  // Error: unterminated string, stop reading string
-            //DEBUG
-            System.out.println("DEBUG: In string, \n found.");
-            //END 
-            // Set global error type
-            globalErrorType = ErrorType.UNTERMINATED_STRING;
-            errorTokenName = currentSpelling.toString();
-            // Error sourcePosition - from the start of the string to the start of the string
-            errorSourcePosition = new SourcePosition(stringStartLine,stringStartColumn,stringStartColumn);
-            // Set error message
-            String errorMessage = "%: unterminated string";
-            errorReporter.reportError(errorMessage, errorTokenName, errorSourcePosition);
-            return;
-            // NOTE: Cannot skip or accept before tok is return to vc.java
+        if(escapeStrings.contains(evaluateBuffer)){ // valid escape string found
+          //DEBUG
+          System.out.println("currentSpelling is " + currentSpelling);
+          //END
+          if (evaluateBuffer.equals("\\b")){
+            replaceEscapeCharInString('\b');
+          }
+          else if (evaluateBuffer.equals("\\f")){
+            replaceEscapeCharInString('\f');
+          }
+          else if (evaluateBuffer.equals("\\n")){
+            replaceEscapeCharInString('\n');
+          }
+          else if (evaluateBuffer.equals("\\r")){
+            replaceEscapeCharInString('\r');
+          }
+          else if (evaluateBuffer.equals("\\t")){
+            replaceEscapeCharInString('\t');
+          }
+          else if (evaluateBuffer.equals("\\'")){
+            replaceEscapeCharInString('\'');
+          }
+          else if (evaluateBuffer.equals("\\\"")){
+            replaceEscapeCharInString('\"');
+          }
+          else if (evaluateBuffer.equals("\\\\")){
+            replaceEscapeCharInString('\\');
+          }
+          // After replacing the escape string to char, skip the next char
+          skipInString();
+          skipInString();
+        } else { // Error: illegal escape found
+          //DEBUG
+          System.out.println("DEBUG: illegal escape character found.");
+          //END 
+          // Set global error type
+          globalErrorType = ErrorType.ILLEGAL_ESCAPE_CHAR;
+          // Error tokenName - two character
+          errorTokenName = Character.toString(currentChar).concat(Character.toString(inspectChar(1)));
+          // Error sourcePosition - from the start of the string to where the '\' is found
+          errorSourcePosition = new SourcePosition(line,stringStartColumn,column);
+          // Set error message
+          String errorMessage = "%: illegal escape character";
+          errorReporter.reportError(errorMessage, errorTokenName, errorSourcePosition);
+          // Can only accept
+          accept();
         }
       }
+      else if (currentChar == '\n'){ //Error: unterminated string found
+        //DEBUG
+        System.out.println("DEBUG: In string, \n found.");
+        //END 
+        // Set global error type
+        globalErrorType = ErrorType.UNTERMINATED_STRING;
+        errorTokenName = currentSpelling.toString();
+        // Error sourcePosition - from the start of the string to the start of the string
+        errorSourcePosition = new SourcePosition(stringStartLine,stringStartColumn,stringStartColumn);
+        // Set error message
+        String errorMessage = "%: unterminated string";
+        errorReporter.reportError(errorMessage, errorTokenName, errorSourcePosition);
+        isStringEnd = true; // String end now
+      }
+      else if(currentChar == '\"'){
+        // string close " found, skip
+        isStringEnd = true; // String end now
+        skipInString();
+      }
     }
-    // string close " found, skip
-    skipInString();
+    // // Old
+    // while(currentChar != '\"' && currentChar != sourceFile.eof){
+    //   //DEBUG
+    //   System.out.println("DEBUG: Inspecting " + currentChar + " in string");
+    //   //END
+    //   if (!escapeCharacters.contains(currentChar)){
+    //     accept();
+    //   } else {// escape characters found
+    //     //DEBUG
+    //     System.out.println("DEBUG: escape char " + currentChar + "  found in string");
+    //     //END
+    //     switch(currentChar){
+    //       case '\b':
+    //       case '\f':
+    //       case '\r':
+    //       case '\t':
+    //       case '\'':
+    //         accept();
+    //         break;
+    //       case '\\':
+    //         //DEBUG
+    //         System.out.println("DEBUG: In string, \\ found.");
+    //         //END 
+    //         switch(inspectChar(1)){
+    //           case 'b':
+    //             //TODO - Need to replace spelling
+    //           case 'f':
+    //             //TODO - Need to replace spelling
+    //           case 'r':
+    //             //TODO - Need to replace spelling
+    //           case 't':
+    //             //TODO - Need to replace spelling
+    //           case '\'':
+    //             //TODO - Need to replace spelling
+    //           case '\"':
+    //             //TODO - Need to replace spelling
+    //           case '\\':
+    //             //TODO - Need to replace spelling
+    //             break;
+    //           default:
+    //             illegalEscapeFound = true;
+    //             break;
+    //         }
+    //         // (inspectChar(1) != '\\')
+    //         if (illegalEscapeFound) {// Error: illegal escape character found
+    //           //DEBUG
+    //           System.out.println("DEBUG: illegal escape character found.");
+    //           //END 
+    //           // Set global error type
+    //           globalErrorType = ErrorType.ILLEGAL_ESCAPE_CHAR;
+    //           // Error tokenName - two character
+    //           errorTokenName = Character.toString(currentChar).concat(Character.toString(inspectChar(1)));
+    //           // Error sourcePosition - from the start of the string to where the '\' is found
+    //           errorSourcePosition = new SourcePosition(line,stringStartColumn,column);
+    //           // Set error message
+    //           String errorMessage = "%: illegal escape character";
+    //           errorReporter.reportError(errorMessage, errorTokenName, errorSourcePosition);
+    //         }
+    //         accept();
+    //         break;
+    //       case '\n':  // Error: unterminated string, stop reading string
+    //         //DEBUG
+    //         System.out.println("DEBUG: In string, \n found.");
+    //         //END 
+    //         // Set global error type
+    //         globalErrorType = ErrorType.UNTERMINATED_STRING;
+    //         errorTokenName = currentSpelling.toString();
+    //         // Error sourcePosition - from the start of the string to the start of the string
+    //         errorSourcePosition = new SourcePosition(stringStartLine,stringStartColumn,stringStartColumn);
+    //         // Set error message
+    //         String errorMessage = "%: unterminated string";
+    //         errorReporter.reportError(errorMessage, errorTokenName, errorSourcePosition);
+    //         return;
+    //         // NOTE: Cannot skip or accept before tok is return to vc.java
+    //     }
+    //   }
+    // }
+    // // string close " found, skip
+    // skipInString();
   }
   /** Float Detetion */
   // Determine if the '.' followed by fraction, or should it terminate
@@ -370,6 +489,7 @@ public final class Scanner {
           return Token.FLOATLITERAL;
         }
       }
+      accept();
       return Token.ERROR;
     }
   }
@@ -621,10 +741,13 @@ public final class Scanner {
     int charStart;
     int charEnd;
     if (kind == Token.STRINGLITERAL){
+      //DEBUG
+      System.out.println("DEBUG: number of escape char is " + numberOfEscapeChar);
+      //END
       if (globalErrorType == ErrorType.UNTERMINATED_STRING){
-        charStart = column - currentSpelling.length() - 1; // Need to set the opening double qoute as start location
+        charStart = column - currentSpelling.length() - numberOfEscapeChar - 1; // Need to set the opening double qoute as start location
       }else{
-        charStart = column - currentSpelling.length() - 2;
+        charStart = column - currentSpelling.length() - numberOfEscapeChar - 2;
       }
     }else{
       charStart = column - currentSpelling.length();
