@@ -488,7 +488,8 @@ public final class Scanner {
 
   /** Skip space and comment */
   void skipSpaceAndComments() {
-
+    int commentStartColumn = column;
+    int commentStartLine = line;
     boolean isEndOfLineComment = false;
     boolean isTraditionalComment = false;
 
@@ -509,6 +510,8 @@ public final class Scanner {
 
     // determine comment type, return if it not a comment
     if (currentChar == '/' && inspectChar(1) == '/'){
+      commentStartColumn = column;
+      commentStartLine = line;
       isEndOfLineComment = true;
       skip(); // point to the 2nd '/'
       skip(); // point to the actual comment
@@ -517,6 +520,8 @@ public final class Scanner {
       //END
     }
     else if (currentChar == '/' && inspectChar(1) == '*'){
+      commentStartColumn = column;
+      commentStartLine = line;
       isTraditionalComment = true;
       skip(); // point to the '*'
       skip(); // point to the actual comment
@@ -562,7 +567,15 @@ public final class Scanner {
       }
       // Error: Unterminated comment, return
       if (isTerminatorPairFound == false){
-        System.out.println("Error: unterminated comment");
+        // Set global error type
+        globalErrorType = ErrorType.UNTERMINATED_COMMENT;
+        // Error sourcePosition - from the start of the string to where the '\' is found
+        SourcePosition errorSourcePosition = new SourcePosition(commentStartLine,commentStartColumn,commentStartColumn);
+        // Set error message
+        String errorMessage = "%: unterminated comment";
+        errorReporter.reportError(errorMessage, "", errorSourcePosition);
+
+        // System.out.println("Error: unterminated comment");
         return;
       }
       // Recurse - skip until a valid content is found
