@@ -514,18 +514,26 @@ public final class Scanner {
   // When entering, there must be 'E' or 'e' in front
   // return Token.FLOATLITERAL or Token.ERROR
   private int getExponent(){
-    accept(); // accept the 'E' or 'e'
-    if(currentChar == '+' || currentChar == '-'){
-      accept();
-      if(Character.isDigit(currentChar)){
+    int accpetCounter = 1;
+    // accept(); // accept the 'E' or 'e'
+    if(inspectChar(1) == '+' || inspectChar(1) == '-'){
+      accpetCounter++;
+      // accept();
+      if(Character.isDigit(inspectChar(2))){
+        accpetCounter++;
+        for (int i=0;i<accpetCounter;i++){
+          accept();
+        }
         getDigitsPlus();
         return Token.FLOATLITERAL;
       }
       else{
-        return Token.ERROR;
+        accpetCounter = 0;
+        return Token.FLOATLITERAL;
       }
     }
-    else if (Character.isDigit(currentChar)){
+    else if (Character.isDigit(inspectChar(1))){
+      accept();
       getDigitsPlus();
       return Token.FLOATLITERAL;
     }
@@ -533,6 +541,30 @@ public final class Scanner {
       return Token.ERROR;
     }
   }
+  // OLD
+  // private int getExponent(){
+  //   string accpetCounter = 1;
+  //   accept(); // accept the 'E' or 'e'
+  //   if(currentChar == '+' || currentChar == '-'){
+  //     accpetCounter++;
+  //     accept();
+  //     if(Character.isDigit(currentChar)){
+  //       getDigitsPlus();
+  //       return Token.FLOATLITERAL;
+  //     }
+  //     else{
+  //       accpetCounter = 0;
+  //       return Token.ERROR;
+  //     }
+  //   }
+  //   else if (Character.isDigit(currentChar)){
+  //     getDigitsPlus();
+  //     return Token.FLOATLITERAL;
+  //   }
+  //   else{
+  //     return Token.ERROR;
+  //   }
+  // }
   /** True Or False */
   // Assumption:
   // When entering, the first letter is either 't' or 'f'
