@@ -7,6 +7,7 @@
 package VC.Scanner;
 
 import VC.ErrorReporter;
+import java.util.*;
 
 public final class Scanner { 
 
@@ -20,6 +21,17 @@ public final class Scanner {
 
   private int line = 1;
   private int column = 1;
+
+  private enum ErrorType{
+    NO_ERROR,
+    ILLEGAL_CHARACTER,
+    UNTERMINATED_COMMENT,
+    UNTERMINATED_STRING,
+    ILLEGAL_ESCAPE_CHAR
+  }
+  private ErrorType globalErrorType = ErrorType.NO_ERROR;
+
+  List<Character> escapeCharacters = Arrays.asList('\b', '\f', '\n', '\r', '\t', '\'','\"','\\');
 
 // =========================================================
 
@@ -227,9 +239,7 @@ public final class Scanner {
         //  attempting to recognise a float
       // String literal
       case '"':
-        do{
-          accept();
-        }while(currentChar != '"' && currentChar != '\n' && currentChar != sourceFile.eof);
+        getStringLiteral();
         return Token.STRINGLITERAL;
       // ....
       case SourceFile.eof:	
@@ -249,7 +259,92 @@ public final class Scanner {
     // accept(); 
     // return Token.ERROR;
   }
+  /** Error Report*/
+  /** String Literals */
+  void skipInString(){
+    //DEBUG
+    System.out.println("DEBUG: skip " + currentChar + " in string");
+    //END
+    if (currentChar == '\n'){
+      line = line + 1;
+      column = 1;
+    } else{
+      column = column + 1;
+    }
+    // get next char
+    currentChar = sourceFile.getNextChar();
+  }
+  // Assumption:
+  // When entering, column is at the start of string '"'
+  private void getStringLiteral(){
+    String errorTokenName = currentSpelling.toString();
+    SourcePosition errorSourcePosition = new SourcePosition();
+    int stringStartLine = line;
+    int stringStartColumn = column;
+    
+    //DEBUG
+    System.out.println("DEBUG: Start detecting string");
+    //END
 
+    // skip the string start double qoute '"'
+    skipInString();
+
+    while(currentChar != '"' && currentChar != sourceFile.eof){
+      //DEBUG
+      System.out.println("DEBUG: Inspecting " + currentChar + " in string");
+      //END
+      accept();
+      if(escapeCharacters.contains(currentChar)){// escape characters found
+        //DEBUG
+        System.out.println("DEBUG: escape char " + currentChar + "  found in string");
+        //END
+        switch(currentChar){
+          case '\b':
+          case '\f':
+          case '\r':
+          case '\t':
+          case '\'':
+          case '\"':
+            accept();
+            break;
+          case '\\':
+            //DEBUG
+            System.out.println("DEBUG: In string, \\ found.");
+            //END 
+            if (inspectChar(1) != '\\') {// Error: illegal escape character found
+              //DEBUG
+              System.out.println("DEBUG: illegal escape character found.");
+              //END 
+              // Set global error type
+              globalErrorType = ErrorType.ILLEGAL_ESCAPE_CHAR;
+              // Error tokenName - two character
+              errorTokenName = Character.toString(currentChar).concat(Character.toString(inspectChar(1)));
+              // Error sourcePosition - from the start of the string to where the '\' is found
+              errorSourcePosition = new SourcePosition(line,stringStartColumn,column);
+              // Set error message
+              String errorMessage = "%: illegal escape character";
+              errorReporter.reportError(errorMessage, errorTokenName, errorSourcePosition);
+            }
+            accept();
+            break;
+          case '\n':  // Error: unterminated string, stop reading string
+            //DEBUG
+            System.out.println("DEBUG: In string, \n found.");
+            //END 
+            // Set global error type
+            globalErrorType = ErrorType.UNTERMINATED_STRING;
+            errorTokenName = currentSpelling.toString();
+            // Error sourcePosition - from the start of the string to the start of the string
+            errorSourcePosition = new SourcePosition(stringStartLine,stringStartColumn,stringStartColumn);
+            // Set error message
+            String errorMessage = "%: unterminated string";
+            errorReporter.reportError(errorMessage, errorTokenName, errorSourcePosition);
+            return;
+            // NOTE: Cannot skip or accept before tok is return to vc.java
+        }
+      }
+    }
+  }
   /** Float Detetion */
   // Determine if the '.' followed by fraction, or should it terminate
   private int determineDot(){
@@ -489,6 +584,9 @@ public final class Scanner {
     System.out.println("DEBUG: End of Skip");
     //END
 
+    // reset global error type
+    globalErrorType = ErrorType.NO_ERROR;
+
     // You must record the position of the current token somehow
     //...
 
@@ -504,12 +602,21 @@ public final class Scanner {
      * charEnd = column - 1
      * charStart = column - token.length + 1 - 1
      */
-    int charStart = column - currentSpelling.length();
-    int charEnd = column - 1;
+    int charStart;
+    int charEnd;
+    if (kind == Token.STRINGLITERAL){
+      charStart = column - currentSpelling.length() - 1; // Need to set the opening double qoute as start location
+    }else{
+      charStart = column - currentSpelling.length();
+    }
+    charEnd = column - 1;
     sourcePos = new SourcePosition(line,charStart,charEnd);
 
     tok = new Token(kind, currentSpelling.toString(), sourcePos);
 
+    if (globalErrorType == ErrorType.UNTERMINATED_STRING){
+      skipInString();
+    }
     // * do not remove these three lines
     if (debug)
       System.out.println(tok);
