@@ -71,7 +71,10 @@ public final class Scanner {
     }
     // increase column
     else if (currentChar == '\t'){
-      column = column + 8;
+      // column = column + 8;
+      int trutTabNumber = ((column - 1) / 8) + 1;
+      int spaces = trutTabNumber * 8 - column + 1;
+      column = column + spaces;
     }
     else{
       column = column + 1;
