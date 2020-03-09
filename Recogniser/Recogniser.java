@@ -47,6 +47,7 @@ package VC.Recogniser;
 import VC.Scanner.Scanner;
 import VC.Scanner.SourcePosition;
 import VC.Scanner.Token;
+import sun.tools.java.SyntaxError;
 import VC.ErrorReporter;
 
 public class Recogniser {
@@ -204,7 +205,7 @@ public class Recogniser {
   void parseAdditiveExpr() throws SyntaxError {
 
     parseMultiplicativeExpr();
-    while (currentToken.kind == Token.PLUS) {
+    while (currentToken.kind == Token.PLUS || currentToken.kind == Token.MINUS ) {
       acceptOperator();
       parseMultiplicativeExpr();
     }
@@ -213,7 +214,7 @@ public class Recogniser {
   void parseMultiplicativeExpr() throws SyntaxError {
 
     parseUnaryExpr();
-    while (currentToken.kind == Token.MULT) {
+    while (currentToken.kind == Token.MULT || currentToken.kind == Token.DIV ) {
       acceptOperator();
       parseUnaryExpr();
     }
@@ -222,17 +223,16 @@ public class Recogniser {
   void parseUnaryExpr() throws SyntaxError {
 
     switch (currentToken.kind) {
+      case Token.PLUS:
       case Token.MINUS:
-        {
-          acceptOperator();
-          parseUnaryExpr();
-        }
+      case Token.NOT:
+        acceptOperator();
+        parseUnaryExpr();
         break;
 
       default:
         parsePrimaryExpr();
         break;
-       
     }
   }
 
@@ -242,20 +242,40 @@ public class Recogniser {
 
       case Token.ID:
         parseIdent();
+        switch(currentToken.kind) {
+          case Token.LPAREN:
+            parseArgList();
+            break;
+          case Token.LBRACKET:
+            accept();
+            parseExpr();
+            match(Token.RBRACKET);
+            break;
+        }
         break;
 
       case Token.LPAREN:
-        {
-          accept();
-          parseExpr();
-	  match(Token.RPAREN);
-        }
+        accept();
+        parseExpr();
+        match(Token.RPAREN);
         break;
 
       case Token.INTLITERAL:
         parseIntLiteral();
         break;
 
+      case Token.FLOATLITERAL:
+        parseFloatLiteral();
+        break;
+
+      case Token.BOOLEANLITERAL:
+        parseBooleanLiteral();
+        break;
+
+      case Token.STRINGLITERAL:
+        parseStringLiteral();
+        break;
+        
       default:
         syntacticError("illegal parimary expression", currentToken.spelling);
        
@@ -291,4 +311,33 @@ public class Recogniser {
       syntacticError("boolean literal expected here", "");
   }
 
+  void parseStringLiteral() throws SyntaxError {
+    if (currentToken.kind == Token.STRINGLITERAL) {
+      currentToken = scanner.getToken();
+    } else
+      syntacticError("string literal expected here", "");
+  }
+
+  // ========================== PARAMETERS ========================
+  void parseArgList() throws SyntaxError {
+    if (currentToken.kind == Token.LPAREN){
+      accept();
+      parseProperArgList();
+      match(Token.RPAREN);
+    } else {
+      syntacticError("arg-list expected here", "");
+    }
+  }
+
+  void parseProperArgList() throws SyntaxError {
+    parseArg();
+    while(currentToken.kind == Token.COMMA){
+      accept();
+      parseArg();
+    }
+  }
+
+  void parseArg() throws SyntaxError {
+    parseExpr();
+  }
 }
