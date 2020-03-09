@@ -111,6 +111,22 @@ public class Recogniser {
     parseCompoundStmt();
   }
 
+// ======================= PRIMITIVE TYPES =========================
+
+void parseType() throws SyntaxError {
+  switch(currentToken.Kind){
+    case Token.VOID:
+    case Token.BOOLEAN:
+    case Token.INT:
+    case Token.FLOAT:
+      accept();
+      break;
+    default:
+      errorReporter.reportError(messageTemplate, tokenQuoted, pos); //FIXME: Unsure about this?
+      break;
+  }
+}
+
 // ======================= STATEMENTS ==============================
 
 
@@ -178,7 +194,7 @@ public class Recogniser {
       syntacticError("identifier expected here", "");
   }
 
-// ======================= OPERATORS ======================
+// ======================== OPERATORS =======================
 
  // Call acceptOperator rather than accept(). 
  // In Assignment 3, an Operator Node will be constructed in here.
@@ -318,7 +334,7 @@ public class Recogniser {
       syntacticError("string literal expected here", "");
   }
 
-  // ========================== PARAMETERS ========================
+// ========================= PARAMETERS =======================
   void parseArgList() throws SyntaxError {
     if (currentToken.kind == Token.LPAREN){
       accept();
