@@ -122,7 +122,7 @@ void parseType() throws SyntaxError {
       accept();
       break;
     default:
-      errorReporter.reportError(messageTemplate, tokenQuoted, pos); //FIXME: Unsure about this?
+      syntacticError("Type expected here", "");
       break;
   }
 }
@@ -213,13 +213,47 @@ void parseType() throws SyntaxError {
 
 
   void parseAssignExpr() throws SyntaxError {
+    parseCondOrExpr();
+    while(currentToken.Kind == Token.EQ){
+      acceptOperator();
+      parseCondOrExpr();
+    }
+  }
 
+  void parseCondOrExpr() throws SyntaxError {
+    parseCondAndExpr();
+    while(currentToken.Kind == Token.OROR){
+      acceptOperator();
+      parseCondAndExpr();
+    }
+  }
+
+  void parseCondAndExpr() throws SyntaxError {
+    parseEqualityExpr();
+    while(currentToken.Kind == Token.ANDAND){
+      acceptOperator();
+      parseEqualityExpr();
+    }
+  }
+
+  void parseEqualityExpr() throws SyntaxError {
+    parseRelExpr();
+    while (currentToken.Kind == Token.EQEQ || currentToken.Kind == Token.NOTEQ){
+      acceptOperator();
+      parseRelExpr();
+    }
+  }
+
+  void parseRelExpr() throws SyntaxError {
     parseAdditiveExpr();
-
+    while(currentToken.Kind == Token.LT || currentToken.Kind == Token.LTEQ 
+    || currentToken.Kind == Token.GT || currentToen.Kind == Token.GTEQ){
+      acceptOperator(); //TODO: Check all accept(), see if they are used correctly
+      parseAdditiveExpr();
+    }
   }
 
   void parseAdditiveExpr() throws SyntaxError {
-
     parseMultiplicativeExpr();
     while (currentToken.kind == Token.PLUS || currentToken.kind == Token.MINUS ) {
       acceptOperator();
@@ -228,7 +262,6 @@ void parseType() throws SyntaxError {
   }
 
   void parseMultiplicativeExpr() throws SyntaxError {
-
     parseUnaryExpr();
     while (currentToken.kind == Token.MULT || currentToken.kind == Token.DIV ) {
       acceptOperator();
@@ -335,6 +368,32 @@ void parseType() throws SyntaxError {
   }
 
 // ========================= PARAMETERS =======================
+  void parseParaList() throws SyntaxError {
+    match(Token.LPAREN);
+    if(currentToken.Kind == Token.RPAREN){
+      match(Token.RPAREN);
+    } else {
+      parseProperParaList();
+      match(Token.RPAREN);
+    }
+  }
+  void parseProperParaList() throws SyntaxError {
+    parseParaDecl();
+    while(currentToken.Kind == Token.COMMA){
+      accept();
+      parseParaDecl();
+    }
+  }
+
+  void parseParaDecl() throws SyntaxError {
+    parseType();
+    if(currentToken.Kind == Token.ID){
+      parseDeclarator(); //TODO: Write parseDeclarator()
+    } else {
+      syntacticError("Declarator expected here", "");
+    }
+  }
+
   void parseArgList() throws SyntaxError {
     if (currentToken.kind == Token.LPAREN){
       accept();
