@@ -114,7 +114,7 @@ public class Recogniser {
 // ======================= PRIMITIVE TYPES =========================
 
 void parseType() throws SyntaxError {
-  switch(currentToken.Kind){
+  switch(currentToken.kind){
     case Token.VOID:
     case Token.BOOLEAN:
     case Token.INT:
@@ -159,22 +159,75 @@ void parseType() throws SyntaxError {
     }
   }
 
-  void parseContinueStmt() throws SyntaxError {
+  void parseIfStmt() throws SyntaxError {
+    match(Token.IF);
+    match(Token.LPAREN);
+    parseExpr();
+    match(Token.RPAREN);
+    parseStmt();
+    if(currentToken.kind == Token.ELSE){
+      match(Token.ELSE);
+      parseStmt();
+    }
+  }
 
-    match(Token.CONTINUE);
+  void parseForStmt() throws SyntaxError {
+    match(Token.FOR);
+    match(Token.LPAREN);
+    parseWhateverInsideForStmt();
+    match(Token.RPAREN);
+    parseStmt();
+  }
+
+  //CustomFunc: Used for parseForStmt()
+  void parseWhateverInsideForStmt() throws SyntaxError {
+    if(currentToken.kind != Token.SEMICOLON)
+      parseExpr();
+
     match(Token.SEMICOLON);
 
+    if(currentToken.kind != Token.SEMICOLON)
+      parseExpr();
+
+    match(Token.SEMICOLON);
+
+    if(currentToken.kind != Token.RPAREN)
+      parseExpr();
+  }
+
+  void parseWhileStmt() throws SyntaxError {
+    match(Token.WHILE);
+    match(Token.LPAREN);
+    parseExpr();
+    match(Token.RPAREN);
+    parseStmt();
+  }
+
+  void parseBreakStmt() throws SyntaxError {
+    match(Token.BREAK);
+    match(Token.SEMICOLON);
+  }
+
+  void parseContinueStmt() throws SyntaxError {
+    match(Token.CONTINUE);
+    match(Token.SEMICOLON);
+  }
+
+  void parseReturnStmt() throws SyntaxError {
+    match(Token.RETURN);
+    if (currentToken.kind == Token.SEMICOLON){
+      match(Token.SEMICOLON);
+    } else {
+      parseExpr();
+      match(Token.SEMICOLON);
+    }
   }
 
   void parseExprStmt() throws SyntaxError {
-
-    if (currentToken.kind == Token.ID
-        || currentToken.kind == Token.INTLITERAL
-        || currentToken.kind == Token.MINUS
-        || currentToken.kind == Token.LPAREN) {
-        parseExpr();
-        match(Token.SEMICOLON);
+    if (currentToken.kind == Token.SEMICOLON){
+      match(Token.SEMICOLON);
     } else {
+      parseExpr();
       match(Token.SEMICOLON);
     }
   }
@@ -214,7 +267,7 @@ void parseType() throws SyntaxError {
 
   void parseAssignExpr() throws SyntaxError {
     parseCondOrExpr();
-    while(currentToken.Kind == Token.EQ){
+    while(currentToken.kind == Token.EQ){
       acceptOperator();
       parseCondOrExpr();
     }
@@ -222,7 +275,7 @@ void parseType() throws SyntaxError {
 
   void parseCondOrExpr() throws SyntaxError {
     parseCondAndExpr();
-    while(currentToken.Kind == Token.OROR){
+    while(currentToken.kind == Token.OROR){
       acceptOperator();
       parseCondAndExpr();
     }
@@ -230,7 +283,7 @@ void parseType() throws SyntaxError {
 
   void parseCondAndExpr() throws SyntaxError {
     parseEqualityExpr();
-    while(currentToken.Kind == Token.ANDAND){
+    while(currentToken.kind == Token.ANDAND){
       acceptOperator();
       parseEqualityExpr();
     }
@@ -238,7 +291,7 @@ void parseType() throws SyntaxError {
 
   void parseEqualityExpr() throws SyntaxError {
     parseRelExpr();
-    while (currentToken.Kind == Token.EQEQ || currentToken.Kind == Token.NOTEQ){
+    while (currentToken.kind == Token.EQEQ || currentToken.kind == Token.NOTEQ){
       acceptOperator();
       parseRelExpr();
     }
@@ -246,9 +299,9 @@ void parseType() throws SyntaxError {
 
   void parseRelExpr() throws SyntaxError {
     parseAdditiveExpr();
-    while(currentToken.Kind == Token.LT || currentToken.Kind == Token.LTEQ 
-    || currentToken.Kind == Token.GT || currentToen.Kind == Token.GTEQ){
-      acceptOperator(); //TODO: Check all accept(), see if they are used correctly
+    while(currentToken.kind == Token.LT || currentToken.kind == Token.LTEQ 
+    || currentToken.kind == Token.GT || currentToen.kind == Token.GTEQ){
+      acceptOperator();
       parseAdditiveExpr();
     }
   }
@@ -296,15 +349,17 @@ void parseType() throws SyntaxError {
             parseArgList();
             break;
           case Token.LBRACKET:
-            accept();
+            match(Token.LBRACKET);
             parseExpr();
             match(Token.RBRACKET);
+            break;
+          default: // arg-list is optional
             break;
         }
         break;
 
       case Token.LPAREN:
-        accept();
+        match(Token.LPAREN);
         parseExpr();
         match(Token.RPAREN);
         break;
@@ -370,7 +425,7 @@ void parseType() throws SyntaxError {
 // ========================= PARAMETERS =======================
   void parseParaList() throws SyntaxError {
     match(Token.LPAREN);
-    if(currentToken.Kind == Token.RPAREN){
+    if(currentToken.kind == Token.RPAREN){
       match(Token.RPAREN);
     } else {
       parseProperParaList();
@@ -379,15 +434,15 @@ void parseType() throws SyntaxError {
   }
   void parseProperParaList() throws SyntaxError {
     parseParaDecl();
-    while(currentToken.Kind == Token.COMMA){
-      accept();
+    while(currentToken.kind == Token.COMMA){
+      match(Token.COMMA);
       parseParaDecl();
     }
   }
 
   void parseParaDecl() throws SyntaxError {
     parseType();
-    if(currentToken.Kind == Token.ID){
+    if(currentToken.kind == Token.ID){
       parseDeclarator(); //TODO: Write parseDeclarator()
     } else {
       syntacticError("Declarator expected here", "");
@@ -396,7 +451,7 @@ void parseType() throws SyntaxError {
 
   void parseArgList() throws SyntaxError {
     if (currentToken.kind == Token.LPAREN){
-      accept();
+      match(Token.LPAREN);
       parseProperArgList();
       match(Token.RPAREN);
     } else {
@@ -407,7 +462,7 @@ void parseType() throws SyntaxError {
   void parseProperArgList() throws SyntaxError {
     parseArg();
     while(currentToken.kind == Token.COMMA){
-      accept();
+      match(Token.COMMA);
       parseArg();
     }
   }
