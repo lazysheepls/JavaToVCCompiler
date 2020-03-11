@@ -88,7 +88,14 @@ public class Recogniser {
 
 
 // ========================== PROGRAMS ========================
+  // public void parseProgram() {
+  //   try{
+  //     while(currentToken.kind != Token.EOF){
 
+  //     }
+  //   } 
+  //   catch (SyntaxError s) { }
+  // }
   public void parseProgram() {
 
     try {
@@ -103,14 +110,58 @@ public class Recogniser {
 // ========================== DECLARATIONS ========================
 
   void parseFuncDecl() throws SyntaxError {
-
-    match(Token.VOID);
+    parseType();
     parseIdent();
-    match(Token.LPAREN);
-    match(Token.RPAREN);
+    parseParaList();
     parseCompoundStmt();
   }
+  
+  void parseVarDecl() throws SyntaxError {
+    parseType();
+    parseInitDeclaratorList();
+    match(Token.SEMICOLON);
+  }
 
+  void parseInitDeclaratorList() throws SyntaxError {
+    parseInitDeclarator();
+    while(currentToken.kind == Token.COMMA){
+      match(Token.COMMA);
+      parseInitDeclarator();
+    }
+  }
+
+  void parseInitDeclarator() throws SyntaxError {
+    parseDeclarator();
+    if(currentToken.kind == Token.EQ){
+      acceptOperator();
+      parseInitialiser();
+    }
+  }
+
+  void parseDeclarator() throws SyntaxError {
+    parseIdent();
+    if(currentToken.kind == Token.LBRACKET){
+      match(Token.LBRACKET);
+      if(currentToken.kind == Token.INTLITERAL){
+        parseIntLiteral();
+      }
+      match(Token.RBRACKET);
+    }
+  }
+
+  void parseInitialiser() throws SyntaxError {
+    if (currentToken.kind != Token.LCURLY){
+      parseExpr();
+    } else {
+      match(Token.LCURLY);
+      parseExpr();
+      while(currentToken.kind == Token.COMMA){
+        match(Token.COMMA);
+        parseExpr();
+      }
+      match(Token.RCURLY);
+    }
+  }
 // ======================= PRIMITIVE TYPES =========================
 
 void parseType() throws SyntaxError {
@@ -128,34 +179,54 @@ void parseType() throws SyntaxError {
 }
 
 // ======================= STATEMENTS ==============================
-
-
   void parseCompoundStmt() throws SyntaxError {
-
     match(Token.LCURLY);
-    parseStmtList();
+    parseVarDeclList(); // var-decl*
+    parseStmtList(); // stmt*
     match(Token.RCURLY);
+  }
+
+  void parseVarDeclList() throws SyntaxError { // var-decl*
+    while(currentToken.kind == Token.VOID ||
+    currentToken.kind == Token.BOOLEAN ||
+    currentToken.kind == Token.INT ||
+    currentToken.kind == Token.FLOAT) // use first of var-decl
+      parseVarDecl();
   }
 
  // Here, a new nontermial has been introduced to define { stmt } *
   void parseStmtList() throws SyntaxError {
-
-    while (currentToken.kind != Token.RCURLY) 
+    while (currentToken.kind != Token.RCURLY) // use follow of stmt
       parseStmt();
   }
 
   void parseStmt() throws SyntaxError {
 
     switch (currentToken.kind) {
-
-    case Token.CONTINUE:
-      parseContinueStmt();
-      break;
-
-    default:
-      parseExprStmt();
-      break;
-
+      case Token.LCURLY:
+        parseCompoundStmt();
+        break;
+      case Token.IF:
+        parseIfStmt();
+        break;
+      case Token.FOR:
+        parseForStmt();
+        break;
+      case Token.WHILE:
+        parseWhileStmt();
+        break;
+      case Token.BREAK:
+        parseBreakStmt();
+        break;
+      case Token.CONTINUE:
+        parseContinueStmt();
+        break;
+      case Token.RETURN:
+        parseReturnStmt();
+        break;
+      default:
+        parseExprStmt();
+        break;
     }
   }
 
