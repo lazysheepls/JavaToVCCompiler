@@ -47,7 +47,6 @@ package VC.Recogniser;
 import VC.Scanner.Scanner;
 import VC.Scanner.SourcePosition;
 import VC.Scanner.Token;
-import sun.tools.java.SyntaxError;
 import VC.ErrorReporter;
 
 public class Recogniser {
@@ -372,7 +371,7 @@ void parseType() throws SyntaxError {
   void parseRelExpr() throws SyntaxError {
     parseAdditiveExpr();
     while(currentToken.kind == Token.LT || currentToken.kind == Token.LTEQ 
-    || currentToken.kind == Token.GT || currentToen.kind == Token.GTEQ){
+    || currentToken.kind == Token.GT || currentToken.kind == Token.GTEQ){
       acceptOperator();
       parseAdditiveExpr();
     }
