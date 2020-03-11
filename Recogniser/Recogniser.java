@@ -88,58 +88,59 @@ public class Recogniser {
 
 
 // ========================== PROGRAMS ========================
-  // public void parseProgram() {
-  //   try{
-  //     while(currentToken.kind != Token.EOF){
-
-  //     }
-  //   } 
-  //   catch (SyntaxError s) { }
-  // }
   public void parseProgram() {
-
-    try {
-      parseFuncDecl();
-      if (currentToken.kind != Token.EOF) {
-        syntacticError("\"%\" wrong result type for a function", currentToken.spelling);
+    try{
+      while(currentToken.kind != Token.EOF){
+        parseType();
+        parseIdent();
+        if (currentToken.kind == Token.LPAREN){
+          parseFuncDecl();
+        }
+        else {
+          parseVarDecl();
+        }
       }
-    }
-    catch (SyntaxError s) {  }
+    } 
+    catch (SyntaxError s) { }
   }
 
 // ========================== DECLARATIONS ========================
 
   void parseFuncDecl() throws SyntaxError {
-    parseType();
-    parseIdent();
+    // Skip the following two parses due to left-factoring in parseProgram()
+    // parseType();
+    // parseIdent();
     parseParaList();
     parseCompoundStmt();
   }
   
   void parseVarDecl() throws SyntaxError {
-    parseType();
+    // Skip the following parse dut to left-factoring in parseProgram()
+    // parseType();
     parseInitDeclaratorList();
     match(Token.SEMICOLON);
   }
 
   void parseInitDeclaratorList() throws SyntaxError {
-    parseInitDeclarator();
+    // set to true to skip parse identifier due to left-factoring in parseProgram()
+    parseInitDeclarator(true);
     while(currentToken.kind == Token.COMMA){
       match(Token.COMMA);
-      parseInitDeclarator();
+      parseInitDeclarator(false);
     }
   }
 
-  void parseInitDeclarator() throws SyntaxError {
-    parseDeclarator();
+  void parseInitDeclarator(boolean skipParseIdent) throws SyntaxError {
+    parseDeclarator(skipParseIdent);
     if(currentToken.kind == Token.EQ){
       acceptOperator();
       parseInitialiser();
     }
   }
 
-  void parseDeclarator() throws SyntaxError {
-    parseIdent();
+  void parseDeclarator(boolean skipParseIdent) throws SyntaxError {
+    if(!skipParseIdent)
+      parseIdent();
     if(currentToken.kind == Token.LBRACKET){
       match(Token.LBRACKET);
       if(currentToken.kind == Token.INTLITERAL){
@@ -514,7 +515,7 @@ void parseType() throws SyntaxError {
   void parseParaDecl() throws SyntaxError {
     parseType();
     if(currentToken.kind == Token.ID){
-      parseDeclarator(); //TODO: Write parseDeclarator()
+      parseDeclarator(false); // do not skip parse identifier
     } else {
       syntacticError("Declarator expected here", "");
     }
