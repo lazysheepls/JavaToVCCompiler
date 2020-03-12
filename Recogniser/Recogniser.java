@@ -96,7 +96,7 @@ public class Recogniser {
           parseFuncDecl();
         }
         else {
-          parseVarDecl();
+          parseVarDecl(true);
         }
       }
     } 
@@ -113,16 +113,17 @@ public class Recogniser {
     parseCompoundStmt();
   }
   
-  void parseVarDecl() throws SyntaxError {
+  void parseVarDecl(boolean skipParseIdent) throws SyntaxError {
     // Skip the following parse dut to left-factoring in parseProgram()
-    // parseType();
-    parseInitDeclaratorList();
+    if(!skipParseIdent)
+      parseType();
+    parseInitDeclaratorList(skipParseIdent);
     match(Token.SEMICOLON);
   }
 
-  void parseInitDeclaratorList() throws SyntaxError {
+  void parseInitDeclaratorList(boolean skipParseIdent) throws SyntaxError {
     // set to true to skip parse identifier due to left-factoring in parseProgram()
-    parseInitDeclarator(true);
+    parseInitDeclarator(skipParseIdent);
     while(currentToken.kind == Token.COMMA){
       match(Token.COMMA);
       parseInitDeclarator(false);
@@ -191,7 +192,7 @@ void parseType() throws SyntaxError {
     currentToken.kind == Token.BOOLEAN ||
     currentToken.kind == Token.INT ||
     currentToken.kind == Token.FLOAT) // use first of var-decl
-      parseVarDecl();
+      parseVarDecl(false);
   }
 
  // Here, a new nontermial has been introduced to define { stmt } *
