@@ -522,12 +522,12 @@ void parseType() throws SyntaxError {
   }
 
   void parseArgList() throws SyntaxError {
-    if (currentToken.kind == Token.LPAREN){
-      match(Token.LPAREN);
-      parseProperArgList();
+    match(Token.LPAREN);
+    if (currentToken.kind == Token.RPAREN){
       match(Token.RPAREN);
     } else {
-      syntacticError("arg-list expected here", "");
+      parseProperArgList();
+      match(Token.RPAREN);
     }
   }
 
