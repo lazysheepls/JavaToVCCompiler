@@ -174,7 +174,7 @@ void parseType() throws SyntaxError {
       accept();
       break;
     default:
-      syntacticError("Type expected here", "");
+      syntacticError("\"%\" wrong result type for a function", currentToken.spelling);
       break;
   }
 }
@@ -453,8 +453,8 @@ void parseType() throws SyntaxError {
         break;
         
       default:
-        syntacticError("illegal parimary expression", currentToken.spelling);
-       
+        syntacticError("\"%\" is an illegal primary expression", currentToken.spelling);
+        break;
     }
   }
 
