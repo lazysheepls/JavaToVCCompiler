@@ -348,19 +348,18 @@ public class Parser {
     start(unaryPos);
 
     switch (currentToken.kind) {
+      case Token.PLUS:
       case Token.MINUS:
-        {
-          Operator opAST = acceptOperator();
-          Expr e2AST = parseUnaryExpr();
-          finish(unaryPos);
-          exprAST = new UnaryExpr(opAST, e2AST, unaryPos);
-        }
+      case Token.NOT:
+        Operator opAST = acceptOperator();
+        Expr e2AST = parseUnaryExpr();
+        finish(unaryPos);
+        exprAST = new UnaryExpr(opAST, e2AST, unaryPos);
         break;
 
       default:
         exprAST = parsePrimaryExpr();
         break;
-       
     }
     return exprAST;
   }
