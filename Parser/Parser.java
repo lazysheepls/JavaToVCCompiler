@@ -204,6 +204,7 @@ public class Parser {
     match(Token.LCURLY);
 
     // Insert code here to build a DeclList node for variable declarations
+    List dlAST = parseVarDeclList();
     List slAST = parseStmtList();
     match(Token.RCURLY);
     finish(stmtPos);
@@ -211,11 +212,24 @@ public class Parser {
     /* In the subset of the VC grammar, no variable declarations are
      * allowed. Therefore, a block is empty iff it has no statements.
      */
-    if (slAST instanceof EmptyStmtList) 
+    if (dlAST instanceof EmptyDeclList && slAST instanceof EmptyStmtList) 
       cAST = new EmptyCompStmt(stmtPos);
     else
-      cAST = new CompoundStmt(new EmptyDeclList(dummyPos), slAST, stmtPos);
+      cAST = new CompoundStmt(dlAST, slAST, stmtPos);
     return cAST;
+  }
+
+  //TODO: Not finished
+  List parseVarDeclList() throws SyntaxError { // var-decl*
+    List dlAST = null;
+
+    // while(currentToken.kind == Token.VOID ||
+    // currentToken.kind == Token.BOOLEAN ||
+    // currentToken.kind == Token.INT ||
+    // currentToken.kind == Token.FLOAT) // use first of var-decl
+    //   // parseVarDecl(false);
+    
+    return dlAST;
   }
 
 
@@ -247,9 +261,157 @@ public class Parser {
   Stmt parseStmt() throws SyntaxError {
     Stmt sAST = null;
 
-    sAST = parseExprStmt();
-
+    switch (currentToken.kind) {
+      case Token.LCURLY:
+        sAST = parseCompoundStmt();
+        break;
+      case Token.IF:
+        sAST = parseIfStmt();
+        break;
+      case Token.FOR:
+        sAST = parseForStmt();
+        break;
+      case Token.WHILE:
+        sAST = parseWhileStmt();
+        break;
+      case Token.BREAK:
+        sAST = parseBreakStmt();
+        break;
+      case Token.CONTINUE:
+        sAST = parseContinueStmt();
+        break;
+      case Token.RETURN:
+        sAST = parseReturnStmt();
+        break;
+      default:
+        sAST = parseExprStmt();
+        break;
+    }
+    
     return sAST;
+  }
+
+  Stmt parseIfStmt() throws SyntaxError {
+    Stmt ifAST = null;
+    Expr eAST = null;
+    Stmt s1AST = null;
+    Stmt s2AST = null;
+    SourcePosition ifPos = new SourcePosition();
+    start(ifPos);
+
+    match(Token.IF);
+    match(Token.LPAREN);
+    eAST = parseExpr();
+    match(Token.RPAREN);
+    s1AST = parseStmt();
+    if(currentToken.kind == Token.ELSE){
+      match(Token.ELSE);
+      s2AST = parseStmt();
+      finish(ifPos);
+      ifAST = new IfStmt(eAST, s1AST, s2AST, ifPos);
+    }
+    else {
+      finish(ifPos);
+      ifAST = new IfStmt(eAST, s1AST, ifPos);
+    }
+    return ifAST;
+  }
+
+  Stmt parseForStmt() throws SyntaxError {
+    Stmt forAST = null;
+    Stmt sAST = null;
+    SourcePosition forPos = new SourcePosition();
+    start(forPos);
+
+    Expr e1AST = new EmptyExpr(forPos);
+    Expr e2AST = new EmptyExpr(forPos);
+    Expr e3AST = new EmptyExpr(forPos);
+
+    match(Token.FOR);
+    match(Token.LPAREN);
+
+    if(currentToken.kind != Token.SEMICOLON)
+      e1AST = parseExpr();
+
+    match(Token.SEMICOLON);
+
+    if(currentToken.kind != Token.SEMICOLON)
+      e2AST = parseExpr();
+
+    match(Token.SEMICOLON);
+
+    if(currentToken.kind != Token.RPAREN)
+      e3AST = parseExpr();
+
+    match(Token.RPAREN);
+    sAST = parseStmt();
+
+    finish(forPos);
+    forAST = new ForStmt(e1AST, e2AST, e3AST, sAST, forPos);
+    return forAST;
+  }
+
+  Stmt parseWhileStmt() throws SyntaxError {
+    Expr eAST = null;
+    Stmt sAST = null;
+    SourcePosition whilePos = new SourcePosition();
+    start(whilePos);
+
+    match(Token.WHILE);
+    match(Token.LPAREN);
+    eAST = parseExpr();
+    match(Token.RPAREN);
+    sAST = parseStmt();
+    finish(whilePos);
+
+    Stmt whileAST = new WhileStmt(eAST,sAST, whilePos);
+    return whileAST;
+  }
+
+  Stmt parseBreakStmt() throws SyntaxError {
+    Stmt breakAST = null;
+    SourcePosition breakPos = new SourcePosition();
+    start(breakPos);
+
+    match(Token.BREAK);
+    match(Token.SEMICOLON);
+    finish(breakPos);
+
+    breakAST = new BreakStmt(breakPos);
+    return breakAST;
+  }
+
+  Stmt parseContinueStmt() throws SyntaxError {
+    Stmt continueAST = null;
+    SourcePosition continuePos = new SourcePosition();
+    start(continuePos);
+
+    match(Token.CONTINUE);
+    match(Token.SEMICOLON);
+    finish(continuePos);
+
+    continueAST = new ContinueStmt(continuePos);
+    return continueAST;
+  }
+
+  Stmt parseReturnStmt() throws SyntaxError {
+    Stmt returnAST = null;
+    Expr eAST = null;
+    SourcePosition returnPos = new SourcePosition();
+    start(returnPos);
+
+    match(Token.RETURN);
+    if (currentToken.kind == Token.SEMICOLON){
+      eAST = new EmptyExpr(returnPos);
+      match(Token.SEMICOLON);
+      finish(returnPos);
+    } else {
+      eAST = parseExpr();
+      match(Token.SEMICOLON);
+      finish(returnPos);
+    }
+    returnAST = new ReturnStmt(eAST, returnPos);
+    return returnAST;
   }
 
   Stmt parseExprStmt() throws SyntaxError {
@@ -266,6 +428,7 @@ public class Parser {
         finish(stmtPos);
         sAST = new ExprStmt(eAST, stmtPos);
     } else {
+      Expr eAST = new EmptyExpr(stmtPos);
       match(Token.SEMICOLON);
       finish(stmtPos);
       sAST = new ExprStmt(new EmptyExpr(dummyPos), stmtPos);
@@ -527,18 +690,32 @@ public class Parser {
     return argList;
   }
 
-  //TODO: Not finished
-  void parseProperArgList() throws SyntaxError {
-    parseArg();
+  //TODO: Not finished (CURRENT)
+  List parseProperArgList() throws SyntaxError {
+    SourcePosition properArgListPos = new SourcePosition();
+    start(properArgListPos);
+
+    Arg aAST = parseArg();
+    List alList = null;
+    // List alList = new ArgList(aAST, new List(properArgListPos));
     while(currentToken.kind == Token.COMMA){
       match(Token.COMMA);
-      parseArg();
+      Arg arg2AST = parseArg();
+      alList = new ArgList(arg2AST, alList, properArgListPos);
     }
+
+    return alList;
   }
 
-  //TODO: Not finished
-  void parseArg() throws SyntaxError {
-    parseExpr();
+  Arg parseArg() throws SyntaxError {
+    Arg argAST = null;
+    SourcePosition argPos = new SourcePosition();
+    start(argPos);
+
+    Expr eAST = parseExpr();
+    argAST = new Arg(eAST, argPos);
+
+    return argAST;
   }
 
 }
