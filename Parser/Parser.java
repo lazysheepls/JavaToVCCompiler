@@ -220,7 +220,8 @@ public class Parser {
         finish(declPos);
         dlList = new DeclList(dAST, new EmptyDeclList(declPos), declPos);
       }
-      if (dlList == null) {
+      // if (dlList == null) {
+      if (dAST == null) {
         dlList = new EmptyDeclList(declPos);
       }
     
@@ -474,24 +475,33 @@ public class Parser {
   }
 
 // ======================= STATEMENTS ==============================
-
   Stmt parseCompoundStmt() throws SyntaxError {
     Stmt cAST = null; 
 
     SourcePosition stmtPos = new SourcePosition();
     start(stmtPos);
 
-    match(Token.LCURLY);
+    List dlAST = new EmptyDeclList(dummyPos);
+    List slAST = new EmptyStmtList(dummyPos);
 
+    match(Token.LCURLY);
+    
     // Insert code here to build a DeclList node for variable declarations
-    List dlAST = parseLocalVarDeclList(); //DEBUG:
-    List slAST = parseStmtList();
+    if(currentToken.kind == Token.VOID ||
+       currentToken.kind == Token.BOOLEAN ||
+       currentToken.kind == Token.INT ||
+       currentToken.kind == Token.FLOAT){
+         Type tAST = parseType();
+         dlAST = parseLocalVarDeclList(tAST);
+       }
+
+    slAST = parseStmtList();
     match(Token.RCURLY);
     finish(stmtPos);
 
     /* In the subset of the VC grammar, no variable declarations are
-     * allowed. Therefore, a block is empty iff it has no statements.
-     */
+    * allowed. Therefore, a block is empty iff it has no statements.
+    */
     if (dlAST instanceof EmptyDeclList && slAST instanceof EmptyStmtList) 
       cAST = new EmptyCompStmt(stmtPos);
     else
@@ -499,43 +509,148 @@ public class Parser {
     return cAST;
   }
 
-  List parseLocalVarDeclList() throws SyntaxError { // var-decl*
-    List declListAST = null;
-    SourcePosition declListPos = new SourcePosition();
-    start(declListPos);
+  //FIXME:
+  // Stmt parseCompoundStmt() throws SyntaxError {
+  //   Stmt cAST = null; 
 
-    Decl localVarAST = null;
-    declListAST = new EmptyDeclList(declListPos);
+  //   SourcePosition stmtPos = new SourcePosition();
+  //   start(stmtPos);
 
-    while(currentToken.kind == Token.VOID ||
-    currentToken.kind == Token.BOOLEAN ||
-    currentToken.kind == Token.INT ||
-    currentToken.kind == Token.FLOAT) // use first of var-decl
-      declListAST = new DeclList(parseLocalVarDecl(), declListAST, declListPos);
+  //   match(Token.LCURLY);
+
+  //   // Insert code here to build a DeclList node for variable declarations
+  //   List dlAST = parseLocalVarDeclList(); //DEBUG:
+  //   List slAST = parseStmtList();
+  //   match(Token.RCURLY);
+  //   finish(stmtPos);
+
+  //   /* In the subset of the VC grammar, no variable declarations are
+  //    * allowed. Therefore, a block is empty iff it has no statements.
+  //    */
+  //   if (dlAST instanceof EmptyDeclList && slAST instanceof EmptyStmtList) 
+  //     cAST = new EmptyCompStmt(stmtPos);
+  //   else
+  //     cAST = new CompoundStmt(dlAST, slAST, stmtPos);
+  //   return cAST;
+  // }
+
+  List parseLocalVarDeclList(Type tAST) throws SyntaxError {
+    List localVarList = null;
+    SourcePosition localVarListPos = new SourcePosition();
+    start(localVarListPos);
+
+    boolean hasMoreThanOneVar = false;
+
+    Ident idAST = null;
+    Decl vAST = parseLocalVarDecl(tAST, idAST);
+
+    if(currentToken.kind == Token.SEMICOLON){
+      match(Token.SEMICOLON);
+    } else if (currentToken.kind == Token.COMMA){
+      match(Token.COMMA);
+      hasMoreThanOneVar = true;
+    }
+
+    if(currentToken.kind == Token.VOID ||
+       currentToken.kind == Token.BOOLEAN ||
+       currentToken.kind == Token.INT ||
+       currentToken.kind == Token.FLOAT) {
+        tAST = parseType();
+        localVarList = parseLocalVarDeclList(tAST);
+        finish(localVarListPos);
+        localVarList = new DeclList(vAST, localVarList, localVarListPos);
+      }
+      else if (currentToken.kind == Token.ID && hasMoreThanOneVar){
+        localVarList = parseLocalVarDeclList(tAST);
+        finish(localVarListPos);
+        localVarList = new DeclList(vAST, localVarList, localVarListPos);
+      }
+      else if(vAST != null) {
+        finish(localVarListPos);
+        localVarList = new DeclList(vAST, new EmptyDeclList(dummyPos), localVarListPos);
+      }
+      if (vAST == null) {
+        localVarList = new EmptyDeclList(dummyPos);
+      }
     
-    finish(declListPos);
-    return declListAST;
+      return localVarList;
   }
 
-  //FIXME: Not right
-  Decl parseLocalVarDecl() throws SyntaxError {
-    // By default - local var is NOT skipping type and ident parsing due to left-factoring in parseProgram()
+  //FIXME:
+  // List parseLocalVarDeclList() throws SyntaxError { // var-decl*
+  //   List declListAST = null;
+  //   SourcePosition declListPos = new SourcePosition();
+  //   start(declListPos);
+
+  //   Decl localVarAST = null;
+  //   declListAST = new EmptyDeclList(declListPos);
+
+  //   while(currentToken.kind == Token.VOID ||
+  //   currentToken.kind == Token.BOOLEAN ||
+  //   currentToken.kind == Token.INT ||
+  //   currentToken.kind == Token.FLOAT) // use first of var-decl
+  //     declListAST = new DeclList(parseLocalVarDecl(), declListAST, declListPos);
+    
+  //   finish(declListPos);
+  //   return declListAST;
+  // }
+
+  Decl parseLocalVarDecl(Type tAST, Ident idAST) throws SyntaxError {
+    // By default - local var is NOT skipping type and ident parsing (only used by compundStmt)
     Decl localVarAST = null;
     SourcePosition localVarPos = new SourcePosition();
     start(localVarPos);
 
-    // Expr eAST = null;
-    // Type tAST = null;
-    // Ident idAST = null;
+    Expr eAST = null;
+    Type arrAST = tAST;
     
-    // tAST = parseType();
-      
-    // eAST = parseInitDeclaratorList(idAST); // pass empty identifer in
-    // match(Token.SEMICOLON);
-    finish(localVarPos);
-    // localVarAST = new GlobalVarDecl(tAST, idAST, eAST, localVarPos);
+    if (tAST == null)
+      tAST = parseType();
+    if (idAST == null)
+      idAST = parseIdent();
+    
+    // Parse array type
+    if(currentToken.kind == Token.LBRACKET){
+      arrAST = parseArrayType(tAST, localVarPos);
+    }
+
+    // Parse initialiser
+    if(currentToken.kind == Token.EQ){
+      match(Token.EQ);
+      if(currentToken.kind == Token.LCURLY){ // expr { initExpr }
+        eAST = parseInitExpr();
+        finish(localVarPos);
+      } else { // just expr
+        eAST = parseExpr();
+        finish(localVarPos);
+      }
+    } else {
+      finish(localVarPos);
+      eAST = new EmptyExpr(dummyPos);
+    }
+    localVarAST = new LocalVarDecl(arrAST, idAST, eAST, localVarPos);
     return localVarAST;
   }
+
+  //FIXME: Not right
+  // Decl parseLocalVarDecl() throws SyntaxError {
+  //   // By default - local var is NOT skipping type and ident parsing due to left-factoring in parseProgram()
+  //   Decl localVarAST = null;
+  //   SourcePosition localVarPos = new SourcePosition();
+  //   start(localVarPos);
+
+  //   // Expr eAST = null;
+  //   // Type tAST = null;
+  //   // Ident idAST = null;
+    
+  //   // tAST = parseType();
+      
+  //   // eAST = parseInitDeclaratorList(idAST); // pass empty identifer in
+  //   // match(Token.SEMICOLON);
+  //   finish(localVarPos);
+  //   // localVarAST = new GlobalVarDecl(tAST, idAST, eAST, localVarPos);
+  //   return localVarAST;
+  // }
 
   List parseStmtList() throws SyntaxError {
     List slAST = null; 
@@ -1142,6 +1257,7 @@ public class Parser {
 
     tAST = parseType();
     if(currentToken.kind == Token.ID){
+      tAST = parseArrayType(tAST, pPos);
       // idAST = parseDeclarator(idAST); //FIXME:(type conflict) do not skip parse identifier (pass in null)
     } else {
       syntacticError("Declarator expected here", "");
