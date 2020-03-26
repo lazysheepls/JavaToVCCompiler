@@ -434,6 +434,7 @@ public class Parser {
       intLiteralAST = parseIntLiteral();
       dAST = new IntExpr(intLiteralAST, dPos);
     }
+    match(Token.RBRACKET);
     finish(dPos);
     arrAST = new ArrayType(tAST, dAST, arrPos);
     return arrAST;
@@ -867,26 +868,46 @@ public class Parser {
     exprList = parseExprList();
     finish(initPos);
     initAST = new InitExpr(exprList, initPos);
+    match(Token.RCURLY);
     return initAST;
   }
 
   List parseExprList() throws SyntaxError {
+    List exprList = null;
     SourcePosition exprListPos = new SourcePosition();
     start(exprListPos);
 
-    List exprList = new EmptyExprList(exprListPos);
-    Expr sAST = null;
-
-    while(currentToken.kind != Token.RCURLY){
-      SourcePosition exprPos = new SourcePosition();
-      copyStart(exprListPos, exprPos);
-      finish(exprPos);
-
-      exprList = new ExprList(parseExpr(), exprList, exprPos);
+    Expr eAST = parseExpr();
+    if(currentToken.kind == Token.COMMA){
+      match(Token.COMMA);
+      finish(exprListPos);
+      exprList = new ExprList(eAST, parseExprList(), exprListPos);
+    } else {
+      finish(exprListPos);
+      exprList = new ExprList(eAST, new EmptyExprList(dummyPos), exprListPos);
     }
 
     return exprList;
   }
+
+  //FIXME: Wrong Tree & Did not accecpt ","
+  // List parseExprList() throws SyntaxError {
+  //   SourcePosition exprListPos = new SourcePosition();
+  //   start(exprListPos);
+
+  //   List exprList = new EmptyExprList(exprListPos);
+  //   Expr sAST = null;
+
+  //   while(currentToken.kind != Token.RCURLY){
+  //     SourcePosition exprPos = new SourcePosition();
+  //     copyStart(exprListPos, exprPos);
+  //     finish(exprPos);
+
+  //     exprList = new ExprList(parseExpr(), exprList, exprPos);
+  //   }
+
+  //   return exprList;
+  // }
 
   Expr parseExpr() throws SyntaxError {
     Expr exprAST = null;
