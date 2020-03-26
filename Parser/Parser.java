@@ -661,15 +661,13 @@ public class Parser {
 
     if (currentToken.kind != Token.RCURLY) {
       Stmt sAST = parseStmt();
-      {
-        if (currentToken.kind != Token.RCURLY) {
-          slAST = parseStmtList();
-          finish(stmtPos);
-          slAST = new StmtList(sAST, slAST, stmtPos);
-        } else {
-          finish(stmtPos);
-          slAST = new StmtList(sAST, new EmptyStmtList(dummyPos), stmtPos);
-        }
+      if (currentToken.kind != Token.RCURLY) {
+        slAST = parseStmtList();
+        finish(stmtPos);
+        slAST = new StmtList(sAST, slAST, stmtPos);
+      } else {
+        finish(stmtPos);
+        slAST = new StmtList(sAST, new EmptyStmtList(dummyPos), stmtPos);
       }
     }
     else
@@ -840,15 +838,20 @@ public class Parser {
     SourcePosition stmtPos = new SourcePosition();
     start(stmtPos);
 
-    if (currentToken.kind == Token.ID
-        || currentToken.kind == Token.INTLITERAL
-        || currentToken.kind == Token.LPAREN) {
-        Expr eAST = parseExpr();
-        match(Token.SEMICOLON);
-        finish(stmtPos);
-        sAST = new ExprStmt(eAST, stmtPos);
+    if (currentToken.kind == Token.ID ||
+        currentToken.kind == Token.PLUS ||
+        currentToken.kind == Token.MINUS ||
+        currentToken.kind == Token.NOT ||
+        currentToken.kind == Token.LPAREN ||
+        currentToken.kind == Token.INTLITERAL ||
+        currentToken.kind == Token.FLOATLITERAL ||
+        currentToken.kind == Token.BOOLEANLITERAL ||
+        currentToken.kind == Token.STRINGLITERAL) {
+      Expr eAST = parseExpr();
+      match(Token.SEMICOLON);
+      finish(stmtPos);
+      sAST = new ExprStmt(eAST, stmtPos);
     } else {
-      Expr eAST = new EmptyExpr(stmtPos);
       match(Token.SEMICOLON);
       finish(stmtPos);
       sAST = new ExprStmt(new EmptyExpr(dummyPos), stmtPos);
