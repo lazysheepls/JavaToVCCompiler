@@ -9,7 +9,7 @@
             "name": "Debug (Launch) with Arguments Prompt",
             "request": "launch",
             "mainClass": "VC.vc",
-            "args": "Recogniser/t21.vc",
+            "args": "Parser/t2.vc",
             "classPaths": ["/import/ravel/2/z3451444/2020T1/COMP9102"]
         }
     ]
