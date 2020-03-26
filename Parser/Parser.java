@@ -923,17 +923,34 @@ public class Parser {
     Expr e2AST = null;
 
     assignAST = parseCondOrExpr();
-    while(currentToken.kind == Token.EQ){
+    if(currentToken.kind == Token.EQ){
       acceptOperator();
-      e2AST = parseCondOrExpr();
-
-      SourcePosition condOrPos = new SourcePosition();
-      copyStart(assignPos, condOrPos);
-      finish(condOrPos);
-      assignAST = new AssignExpr(assignAST, e2AST, condOrPos);
+      finish(assignPos);
+      assignAST = new AssignExpr(assignAST, parseAssignExpr(), assignPos);
     }
     return assignAST;
   }
+
+  //FIXME: Wrong Tree
+  // Expr parseAssignExpr() throws SyntaxError {
+  //   Expr assignAST = null;
+  //   SourcePosition assignPos = new SourcePosition();
+  //   start(assignPos);
+
+  //   Expr e2AST = null;
+
+  //   assignAST = parseCondOrExpr();
+  //   while(currentToken.kind == Token.EQ){
+  //     acceptOperator();
+  //     e2AST = parseCondOrExpr();
+
+  //     SourcePosition condOrPos = new SourcePosition();
+  //     copyStart(assignPos, condOrPos);
+  //     finish(condOrPos);
+  //     assignAST = new AssignExpr(assignAST, e2AST, condOrPos);
+  //   }
+  //   return assignAST;
+  // }
 
   Expr parseCondOrExpr() throws SyntaxError {
     Expr condOrAST = null;
