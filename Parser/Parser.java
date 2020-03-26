@@ -1234,18 +1234,45 @@ public class Parser {
 
     ParaDecl pAST = null;
 
-    plList = new ParaList(parseParaDecl(), new EmptyParaList(plPos), plPos);
-    while(currentToken.kind == Token.COMMA){
-      match(Token.COMMA);
+    if(currentToken.kind != Token.RPAREN){
       pAST = parseParaDecl();
+      if(currentToken.kind == Token.COMMA){ // More than one para
+        match(Token.COMMA);
+        finish(plPos);
+        plList = new ParaList(pAST, parseProperParaList(), plPos);
+        // List subPlList = parseProperParaList();
+      } else {
+        finish(plPos);
+        plList = new ParaList(pAST, new EmptyParaList(dummyPos), plPos);
+      }
 
-      SourcePosition pPos = new SourcePosition();
-      copyStart(plPos, pPos);
-      finish(pPos);
-      plList = new ParaList(pAST, plList, pPos);
+    } else {// Empty para list
+      finish(plPos);
+      plList = new EmptyParaList(plPos);
     }
     return plList;
   }
+
+  //FIXME: Wrong Tree (Not top down tree)
+  // List parseProperParaList() throws SyntaxError {
+  //   List plList = null;
+  //   SourcePosition plPos = new SourcePosition();
+  //   start(plPos);
+
+  //   ParaDecl pAST = null;
+
+  //   plList = new ParaList(parseParaDecl(), new EmptyParaList(plPos), plPos);
+  //   while(currentToken.kind == Token.COMMA){
+  //     match(Token.COMMA);
+  //     pAST = parseParaDecl();
+
+  //     SourcePosition pPos = new SourcePosition();
+  //     copyStart(plPos, pPos);
+  //     finish(pPos);
+  //     plList = new ParaList(pAST, plList, pPos);
+  //   }
+  //   return plList;
+  // }
 
   ParaDecl parseParaDecl() throws SyntaxError {
     ParaDecl pAST = null;
@@ -1256,11 +1283,9 @@ public class Parser {
     Ident idAST = null;
 
     tAST = parseType();
-    if(currentToken.kind == Token.ID){
+    idAST = parseIdent();
+    if(currentToken.kind == Token.LBRACKET){
       tAST = parseArrayType(tAST, pPos);
-      // idAST = parseDeclarator(idAST); //FIXME:(type conflict) do not skip parse identifier (pass in null)
-    } else {
-      syntacticError("Declarator expected here", "");
     }
 
     finish(pPos);
@@ -1292,19 +1317,39 @@ public class Parser {
     start(alPos);
 
     Arg aAST = null;
+    aAST = parseArg();
 
-    alList = new ArgList(parseArg(), new EmptyArgList(alPos), alPos);
-    while(currentToken.kind == Token.COMMA){
+    if(currentToken.kind == Token.COMMA){
       match(Token.COMMA);
-      aAST = parseArg();
-
-      SourcePosition aPos = new SourcePosition();
-      copyStart(alPos, aPos);
-      finish(aPos);
-      alList = new ArgList(aAST, alList, aPos);
+      finish(alPos);
+      alList = new ArgList(aAST, parseProperArgList(), alPos);
+    } else {
+      finish(alPos);
+      alList = new ArgList(aAST, new EmptyArgList(dummyPos), alPos);
     }
     return alList;
   }
+
+  //FIXME: Wrong Tree
+  // List parseProperArgList() throws SyntaxError {
+  //   List alList = null;
+  //   SourcePosition alPos = new SourcePosition();
+  //   start(alPos);
+
+  //   Arg aAST = null;
+
+  //   alList = new ArgList(parseArg(), new EmptyArgList(alPos), alPos);
+  //   while(currentToken.kind == Token.COMMA){
+  //     match(Token.COMMA);
+  //     aAST = parseArg();
+
+  //     SourcePosition aPos = new SourcePosition();
+  //     copyStart(alPos, aPos);
+  //     finish(aPos);
+  //     alList = new ArgList(aAST, alList, aPos);
+  //   }
+  //   return alList;
+  // }
 
   Arg parseArg() throws SyntaxError {
     Arg argAST = null;
