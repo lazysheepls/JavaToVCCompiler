@@ -189,7 +189,6 @@ public class Parser {
         finish(declPos);
         dlList = new DeclList(dAST, new EmptyDeclList(dummyPos), declPos);
       }
-      // if (dlList == null) {
       if (dAST == null) {
         dlList = new EmptyDeclList(dummyPos);
       }
@@ -205,12 +204,11 @@ public class Parser {
     start(funcPos);
     
     // Skip the following two parses due to left-factoring in parseProgram()
-    if (tAST == null){
+    if (tAST == null)
       tAST = parseType();
-    }
-    if (idAST == null){
+    if (idAST == null)
       idAST = parseIdent();
-    }
+
     List fplAST = parseParaList();
     Stmt cAST = parseCompoundStmt();
     finish(funcPos);
@@ -1015,7 +1013,6 @@ public class Parser {
         match(Token.COMMA);
         finish(plPos);
         plList = new ParaList(pAST, parseProperParaList(), plPos);
-        // List subPlList = parseProperParaList();
       } else {
         finish(plPos);
         plList = new ParaList(pAST, new EmptyParaList(dummyPos), plPos);

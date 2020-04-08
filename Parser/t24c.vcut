@@ -1,0 +1,19 @@
+Program
+  DeclList
+    FuncDecl
+      void
+      main
+      EmptyParaList
+      CompoundStmt
+        EmptyDeclList
+        StmtList
+          ExprStmt
+            CallExpr
+              putStringLn
+              ArgList
+                Arg
+                  StringExpr
+                    test
+                EmptyArgList
+          EmptyStmtList
+    EmptyDeclList
