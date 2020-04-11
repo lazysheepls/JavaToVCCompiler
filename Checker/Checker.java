@@ -120,7 +120,7 @@ public final class Checker implements Visitor {
   }
 
   // Statements
-
+  
   public Object visitCompoundStmt(CompoundStmt ast, Object o) {
     idTable.openScope();
 
