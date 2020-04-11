@@ -153,7 +153,83 @@ public final class Checker implements Visitor {
 
   // Returns the Type denoting the type of the expression. Does
   // not use the given object.
+  public Object visitUnaryExpr(UnaryExpr ast, Object o) {
+    Type exprType = ast.E.visit(this, o);
 
+    // Avoid spurious errors
+    if(exprType == StdEnvironment.errorType){
+      ast.type = StdEnvironment.errorType;
+      return ast.type;
+    }
+
+    // Check Expr type based on operator
+    switch(ast.O.spelling){
+      case "+":
+      case "-":
+        if (exprType.isIntType()) {
+          ast.type = StdEnvironment.intType;
+        } else if (exprType.isFloatType()) {
+          ast.type = StdEnvironment.floatType;
+        } else {
+          ast.type = StdEnvironment.errorType;
+          reporter.reportError(errMesg[10] + ": %", ast.O.spelling, ast.position);
+        }
+        break;
+      case "!":
+        if (exprType.isBooleanType()) {
+          // Modify <op> to i<op> for boolean operators (JVM)
+          ast.O.spelling = "i" + ast.O.spelling;
+          ast.type = StdEnvironment.booleanType;
+        } else {
+          ast.type = StdEnvironment.errorType;
+          reporter.reportError(errMesg[10] + ": %", ast.O.spelling, ast.position);
+        }
+        break;
+      default:
+        ast.type = StdEnvironment.errorType();
+        reporter.reportError(errMesg[10] + ": %", ast.O.spelling, ast.position);
+        break;
+    }
+
+    return ast.type;
+  }
+
+  public Object visitAssignExpr(AssignExpr ast, Object o) {
+    Type e1Type = (Type) ast.E1.visit(this, o);
+    Type e2Type = (Type) ast.E2.visit(this, o);
+
+    // Avoid spurous error
+    if(e1Type.isErrorType() || e2Type.isErrorType()){
+      ast.type = StdEnvironment.errorType;
+      return StdEnvironment.errorType;
+    }
+
+    //FIXME: Unknown part: arrayExpr, CallExpr, VarExpr (err[7], err[11])
+    if (e1Type.isArrayType()|| e2Type.isArrayType()) {
+      //TODO: cannot rely on assignable for array type (special case)
+    } 
+
+    //TODO: void cannot be in the assignment expr
+
+    // Known part (std env)
+    boolean isE1StdType = isStdType(e1Type);
+    boolean isE2StdType = isStdType(e2Type);
+    
+    // Std types check assignable
+    if(!e1Type.assignable(e2Type)){
+      reporter.reportError(errMesg[6], "", ast.position); //err[6]: incompatible type for =
+      return StdEnvironment.errorType;
+    }
+
+    // Assigment coersions (int to float)
+    if (e1Type.isFloatType() && e2Type.isIntType()){
+      //TODO: insert i2f node
+    }
+
+    // Assign type to current ast
+    ast.type = e1Type; 
+    return ast.type;
+  }
 
   public Object visitEmptyExpr(EmptyExpr ast, Object o) {
     ast.type = StdEnvironment.errorType;
