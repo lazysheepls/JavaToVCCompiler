@@ -125,6 +125,8 @@ public final class Checker implements Visitor {
     idTable.openScope();
 
     // Your code goes here
+    ast.DL.visit(this, o);
+    ast.SL.visit(this, o);
 
     idTable.closeScope();
     return null;
