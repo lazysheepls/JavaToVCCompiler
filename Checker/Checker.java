@@ -7,6 +7,9 @@ package VC.Checker;
 
 import VC.ASTs.*;
 import VC.Scanner.SourcePosition;
+
+import javax.sound.sampled.EnumControl.Type;
+
 import VC.ErrorReporter;
 import VC.StdEnvironment;
 
@@ -179,6 +182,45 @@ public final class Checker implements Visitor {
           }
     if(!(parent instanceof ForStmt || parent instanceof WhileStmt)) {
       reporter.reportError(errMesg[23], "", ast.position);
+    }
+    return null;
+  }
+
+  public Object visitContinueStmt(ContinueStmt ast, Object o) {
+    AST parent = ast.parent;
+    // Find parent node of the break statement
+    while(!(parent instanceof CompoundStmt || 
+            parent instanceof ForStmt ||
+            parent instanceof WhileStmt)) {
+            parent = parent.parent;
+          }
+    if(!(parent instanceof ForStmt || parent instanceof WhileStmt)) {
+      reporter.reportError(errMesg[24], "", ast.position);
+    }
+    return null;
+  }
+
+  public Object visitReturnStmt(ReturnStmt ast, Object o) {
+    Type funcRetType = (FuncDecl) o.T;
+    Type retExprType = ast.E.visit(this,null);
+
+    if (ast.E instanceof EmptyExpr) {
+      // return type with no expr: function return type should be only be void
+      if (!funcRetType.isVoidType()) {
+        reporter.reportError(errMesg[8], "", ast.position);
+      }
+    } else if (retExprType.isArrayType()) {
+      // return type value cannot be array type
+      reporter.reportError(errMesg[8], "", ast.position);
+    } else if (!funcRetType.assignable(retExprType)) {
+      // function return type must be assignable with return type inside the function
+      reporter.reportError(errMesg[8], "", ast.position);
+    }
+
+    // Type coersion
+    if (retExprType.isIntType() && funcRetType.isFloatType()) {
+      // type coersion
+      ast.E = intToFloat(ast.E);
     }
     return null;
   }
