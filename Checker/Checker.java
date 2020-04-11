@@ -135,6 +135,53 @@ public final class Checker implements Visitor {
     return null;
   }
 
+  public Object visitIfStmt(IfStmt ast, Object o) {
+    Type exprType = ast.E.visit(this, o);
+    if (!exprType.isBooleanType()){
+      reporter.reportError(errMesg[20] + " %", "(found: " + exprType.toString() + ")", ast.E.position);
+    }
+    ast.S1.visit(this,o);
+    ast.S2.visit(this,o);
+    return null;
+  }
+
+  public Object visitWhileStmt(WhileStmt ast, Object o) {
+    Type exprType = ast.E.visit(this, o);
+    if(!exprType.isBooleanType()){
+      reporter.reportError(errMesg[22] + " %", "(found: " + exprType.toString() + ")", ast.E.position);
+    }
+    ast.S.visit(this.o);
+    return null;
+  }
+
+  public Object visitForStmt(ForStmt ast, Object o) {
+    Expr e2Expr = ast.E2;
+    Type e2Type = ast.E2.visit(this, o);
+
+    if(!e2Expr.isEmptyExpr()) {
+      if (!e2Type.isBooleanType()) {
+        reporter.reportError(errMesg[21] + " %", "(found: " + exprType.toString() + ")", ast.E2.position);
+      }
+    }
+    ast.E1.visit(this, o);
+    ast.E3.visit(this, o);
+    ast.S.visit(this,o);
+    return null;
+  }
+
+  public Object visitBreakStmt(BreakStmt ast, Object o) {
+    AST parent = ast.parent;
+    // Find parent node of the break statement
+    while(!(parent instanceof CompoundStmt || 
+            parent instanceof ForStmt ||
+            parent instanceof WhileStmt)) {
+            parent = parent.parent;
+          }
+    if(!(parent instanceof ForStmt || parent instanceof WhileStmt)) {
+      reporter.reportError(errMesg[23], "", ast.position);
+    }
+    return null;
+  }
 
   public Object visitExprStmt(ExprStmt ast, Object o) {
     ast.E.visit(this, o);
@@ -313,6 +360,10 @@ public final class Checker implements Visitor {
     }
 
     return ast.type;
+  }
+
+  public Object visitInitExpr(InitExpr ast, Object o) {
+    //TODO:
   }
 
   public Object visitAssignExpr(AssignExpr ast, Object o) {
