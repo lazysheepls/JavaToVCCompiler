@@ -194,6 +194,127 @@ public final class Checker implements Visitor {
     return ast.type;
   }
 
+  public Object visitBinaryExpr(BinaryExpr ast, Object o) {
+    Type e1Type = ast.E1.visit(this, o);
+    Type e2Type = ast.E2.visit(this, o);
+
+    if (e1Type == StdEnvironment.errorType || e2Type == StdEnvironment.errorType) {
+      ast.type = StdEnvironment.errorType;
+      return ast.type;
+    }
+    //TODO: there may be other conditions that could cause scalar error
+    if (e1Type.isArrayType() || e2Type.isArrayType()){ // err[11]: attempt to use an array/fuction as a scalar
+      ast.type = StdEnvironment.errorType;
+      reporter.reportError(errMesg[11], "", ast.position);
+      return ast.type;
+    }
+
+    switch(ast.O.spelling){
+      case "&&":
+      case "||": // logical <op>, oprand: boolean, result: boolean
+        if (e1Type.isBooleanType() && e2Type.isBooleanType()){
+          ast.type = StdEnvironment.booleanType;
+          // Modify <op> to i<op> for boolean operators (JVM)
+          ast.O.spelling = "i" + ast.O.spelling;
+        } else {
+          ast.type = StdEnvironment.errorType;
+          reporter.reportError(errMesg[9] + ": %", ast.O.spelling, ast.position);
+        }
+        break;
+      case "+":
+      case "-":
+      case "*":
+      case "/": // arthematic <op>, oprand: int or float, result: int or float
+        if (e1Type.isIntType() && e2Type.isIntType()) {
+          ast.type = StdEnvironment.intType;
+          // Modify the overloading <op> to i<op>
+          ast.O.spelling = "i" + ast.O.spelling;
+        } else if (e1Type.isFloatType() && e2Type.isFloatType()) {
+          ast.type = StdEnvironment.floatType;
+          // Modify the overloading <op> to f<op>
+          ast.O.spelling = "f" + ast.O.spelling;
+        } else if (e1Type.isIntType() && e2Type.isFloatType()) {
+          // Type coersion for E1
+          ast.E1 = intToFloat(ast.E1);
+          ast.type = StdEnvironment.floatType;
+          // Modify the overloading <op> to f<op>
+          ast.O.spelling = "f" + ast.O.spelling;
+        } else if (e1Type.isFloatType() && e2Type.isIntType()) {
+          // Type coersion for E2
+          ast.E2 = intToFloat(ast.E2);
+          ast.type = StdEnvironment.floatType;
+          // Modify the overloading <op> to f<op>
+          ast.O.spelling = "f" + ast.O.spelling;
+        } else {
+          ast.type = StdEnvironment.errorType;
+          reporter.reportError(errMesg[9] + ": %", ast.O.spelling, ast.position);
+        }
+        break;
+      case "<":
+      case "<=":
+      case ">":
+      case ">=": // relational <op>, oprand: int or float, result: boolean
+      if (e1Type.isIntType() && e2Type.isIntType()) {
+        ast.type = StdEnvironment.booleanType;
+        // Modify the overloading <op> to i<op>
+        ast.O.spelling = "i" + ast.O.spelling;
+      } else if (e1Type.isFloatType() && e2Type.isFloatType()) {
+        ast.type = StdEnvironment.booleanType;
+        // Modify the overloading <op> to f<op>
+        ast.O.spelling = "f" + ast.O.spelling;
+      } else if (e1Type.isIntType() && e2Type.isFloatType()) {
+        // Type coersion for E1
+        ast.E1 = intToFloat(ast.E1);
+        ast.type = StdEnvironment.booleanType;
+        // Modify the overloading <op> to f<op>
+        ast.O.spelling = "f" + ast.O.spelling;
+      } else if (e1Type.isFloatType() && e2Type.isIntType()) {
+        // Type coersion for E2
+        ast.E2 = intToFloat(ast.E2);
+        ast.type = StdEnvironment.booleanType;
+        // Modify the overloading <op> to f<op>
+        ast.O.spelling = "f" + ast.O.spelling;
+      } else {
+        ast.type = StdEnvironment.errorType;
+        reporter.reportError(errMesg[9] + ": %", ast.O.spelling, ast.position);
+      }
+        break;
+      case "==":
+      case "!==": // equality <op>, oprand: boolean or int or float, result: boolean
+        if (e1Type.isBooleanType() && e2Type.isBooleanType()) {
+          ast.type = StdEnvironment.booleanType;
+          // Modify <op> to i<op> for boolean operators (JVM)
+          ast.O.spelling = "i" + ast.O.spelling;
+        } else if (e1Type.isIntType() && e2Type.isIntType()) {
+          ast.type = StdEnvironment.booleanType;
+          // Modify the overloading <op> to i<op>
+          ast.O.spelling = "i" + ast.O.spelling;
+        } else if (e1Type.isIntType() && e2Type.isFloatType()) {
+          // Type coersion for E1
+          ast.E1 = intToFloat(ast.E1);
+          ast.type = StdEnvironment.booleanType;
+          // Modify the overloading <op> to f<op>
+          ast.O.spelling = "f" + ast.O.spelling;
+        } else if (e1Type.isFloatType() && e2Type.isIntType()) {
+          // Type coersion for E2
+          ast.E2 = intToFloat(ast.E2);
+          ast.type = StdEnvironment.booleanType;
+          // Modify the overloading <op> to f<op>
+          ast.O.spelling = "f" + ast.O.spelling;
+        } else {
+          ast.type = StdEnvironment.errorType;
+          reporter.reportError(errMesg[9] + ": %", ast.O.spelling, ast.position);
+        }
+        break;
+      default:
+        ast.type = StdEnvironment.errorType;
+        reporter.reportError(errMesg[9] + ": %", ast.O.spelling, ast.position);
+        break;
+    }
+
+    return ast.type;
+  }
+
   public Object visitAssignExpr(AssignExpr ast, Object o) {
     Type e1Type = (Type) ast.E1.visit(this, o);
     Type e2Type = (Type) ast.E2.visit(this, o);
@@ -465,5 +586,13 @@ public final class Checker implements Visitor {
 
   }
 
+  // Insert unary expr i2f to ast
+  // valid for the following visitor functions: visitAssignExpr, visitBinaryExpr, visitArg and visitReturnStmt
+  private Expr intToFloat(Expr expr){
+    Operator op = new Operator("i2f", dummyPos);
+    UnaryExpr eAST = new UnaryExpr(op, expr, dummyPos);
+    eAST.type = StdEnvironment.floatType;
+    return eAST;
+  }
 
 }
