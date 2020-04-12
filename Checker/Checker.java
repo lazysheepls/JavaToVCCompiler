@@ -490,8 +490,11 @@ public final class Checker implements Visitor {
     // Pass ast as the 2nd argument (as done below) so that the
     // formal parameters of the function an be extracted from ast when the
     // function body is later visited
-
+    ast.I.visit(this, null);
+    ast.PL.visit(this, ast);
     ast.S.visit(this, ast);
+
+    // TODO: err[31] compare function return type and return type in the statement 
     return null;
   }
 
@@ -509,12 +512,90 @@ public final class Checker implements Visitor {
     declareVariable(ast.I, ast);
 
     // fill the rest
+    // Check type is valid
+    if (ast.T.isVoidType()) { // error: declared with void type
+      reporter.reportError(errMesg[3] + ": %", ast.I.spelling, ast.I.position);
+    } else if (ast.T.isArrayType()) {
+      if (((ArrayType)ast.T).T.isVoidType) { // error: declared with void[] type
+        reporter.reportError(errMesg[4] + ": %", ast.I.spelling, ast.I.position);
+      }
+    }
+
+    // Check array type global var decl
+    if (ast.T.isArrayType) {
+      // No initialiser
+      if (ast.E instanceof EmptyExpr) {
+          if (((ArrayExpr)ast.E).E.isEmptyExpr()) { // error: array size missing
+            reporter.reportError(errMesg[18] + ": %", ast.I.spelling, ast.I.position);
+          }
+      }
+
+      // With initialiser
+      if (ast.E instanceof InitExpr) {
+        ast.E.visit(this, ast);
+      } else { // error: scalar initialize for array
+        reporter.reportError(errMesg[15], "", ast.position);
+      }
+    } else {
+    // Check non-array type global var decl
+      if (ast.E instanceof InitExpr) { // error: array initializer for scalar
+        reporter.reportError(errMesg[14], "", ast.position);
+      }
+
+      if(!ast.T.assignable(((GlobalVarDecl)ast.E).type)) { // error: incompetible type before and after "="
+        reporter.reportError(errMesg[6] + ": %", ast.I.spelling, ast.I.position);
+      }
+    }
+
+    ast.I.visit(this,null);
+    ast.E.visit(this,ast);
+
+    return null;
   }
 
   public Object visitLocalVarDecl(LocalVarDecl ast, Object o) {
     declareVariable(ast.I, ast);
 
     // fill the rest
+      // Check type is valid
+      if (ast.T.isVoidType()) { // error: declared with void type
+        reporter.reportError(errMesg[3] + ": %", ast.I.spelling, ast.I.position);
+      } else if (ast.T.isArrayType()) {
+        if (((ArrayType)ast.T).T.isVoidType) { // error: declared with void[] type
+          reporter.reportError(errMesg[4] + ": %", ast.I.spelling, ast.I.position);
+        }
+      }
+  
+      // Check array type local var decl
+      if (ast.T.isArrayType) {
+        // No initialiser
+        if (ast.E instanceof EmptyExpr) {
+            if (((ArrayExpr)ast.E).E.isEmptyExpr()) { // error: array size missing
+              reporter.reportError(errMesg[18] + ": %", ast.I.spelling, ast.I.position);
+            }
+        }
+  
+        // With initialiser
+        if (ast.E instanceof InitExpr) {
+          ast.E.visit(this, ast);
+        } else { // error: scalar initialize for array
+          reporter.reportError(errMesg[15], "", ast.position);
+        }
+      } else {
+      // Check non-array type local var decl
+        if (ast.E instanceof InitExpr) { // error: array initializer for scalar
+          reporter.reportError(errMesg[14], "", ast.position);
+        }
+  
+        if(!ast.T.assignable(((LocalVarDecl)ast.E).type)) { // error: incompetible type before and after "="
+          reporter.reportError(errMesg[6] + ": %", ast.I.spelling, ast.I.position);
+        }
+      }
+  
+      ast.I.visit(this,null);
+      ast.E.visit(this,ast);
+  
+      return null;
   }
 
   // Parameters
