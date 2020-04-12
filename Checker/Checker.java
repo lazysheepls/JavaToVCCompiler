@@ -116,6 +116,13 @@ public final class Checker implements Visitor {
   public Object visitProgram(Program ast, Object o) {
     ast.FL.visit(this, null);
 
+    Decl binding = idTable.retrieve("main");
+    if(binding == null || !binding.isFuncDecl()) { // error: main not found
+      reporter.reportError(errMesg[0], "", ast.position);
+    } else if (!binding.T.isIntType()) {
+      reporter.reportError(errMesg[1], "", ast.position);
+    }
+
     return null;
   }
 
@@ -410,11 +417,31 @@ public final class Checker implements Visitor {
     //TODO:
   }
 
+  public Object visitArrayExpr(ArrayExpr ast, Object o) { //FIXME: missing err[12]
+    Type varType = (Type) ast.V.visit(this, null); //visit simple var
+    Type exprType = (Type) ast.E.visit(this, null);
+    
+    // avoid spurous error
+    if (varType.isErrorType() || exprType.isErrorType()) {
+      ast.type = StdEnvironment.errorType;
+      return ast.type;
+    }
+
+    if(!exprType.isIntType()) { // error: array subscript is not an integer
+      reporter.reportError(errMesg[17], "", ast.position);
+      ast.type = StdEnvironment.errorType;
+      return ast.type;
+    }
+
+    ast.type = varType; // arrayType
+    return ast.type;
+  }
+
   public Object visitAssignExpr(AssignExpr ast, Object o) {
     Type e1Type = (Type) ast.E1.visit(this, o);
     Type e2Type = (Type) ast.E2.visit(this, o);
 
-    // Avoid spurous error
+    // avoid spurous error
     if(e1Type.isErrorType() || e2Type.isErrorType()){
       ast.type = StdEnvironment.errorType;
       return StdEnvironment.errorType;
@@ -475,6 +502,15 @@ public final class Checker implements Visitor {
   public Object visitVarExpr(VarExpr ast, Object o) {
     ast.type = (Type) ast.V.visit(this, null);
     return ast.type;
+  }
+
+  public Object visitCallExpr(CallExpr ast, Object o) {
+    Decl binding = (Decl) ast.I.visit(this, null);
+    if (!binding.isFuncDecl()) { // error: use scalar/array as function
+      ast.type = StdEnvironment.errorType;
+      reporter.reportError(errMesg[19], "", ast.position);
+      return ast.type;
+    }
   }
 
   // Declarations
@@ -624,9 +660,29 @@ public final class Checker implements Visitor {
     return null;
   }
 
+  public Object visitEmptyArgList(EmptyArgList ast, Object o) {
+    if (!o instanceof EmptyParaList) { // para-list is passed all the way to this level to compare with the arg-list
+      reporter.reportError(errMesg[26], "", ast.parent.position);
+    } 
+    return null;
+}
   // Arguments
 
   // Your visitor methods for arguments go here
+
+  public Object visitArgList(ArgList ast, Object o) {
+    if (o instanceof EmptyParaList) { // para-list passed all the way to this level to compare with arg-list
+      reporter.reportError(errMesg[25], "", ast.position);
+    } else {
+      ast.A.visit(this, null);
+      ast.AL.visit(this, null);
+    }
+    return null;
+  }
+
+  public Object visitArg(Arg ast, Object o) { //TODO: i2f here
+
+  }
 
   // Types 
 
@@ -650,6 +706,11 @@ public final class Checker implements Visitor {
 
   public Object visitStringType(StringType ast, Object o) {
     return StdEnvironment.stringType;
+  }
+
+  public Object visitArrayType(ArrayType ast, Object o) { //TODO:
+    ast.E.visit(this, o);
+    return ast;
   }
 
   public Object visitVoidType(VoidType ast, Object o) {
@@ -683,6 +744,11 @@ public final class Checker implements Visitor {
 
   public Object visitOperator(Operator O, Object o) {
     return null;
+  }
+
+  // Variables
+  public Object visitSimpleVar(SimpleVar ast, Object o) {
+
   }
 
   // Creates a small AST to represent the "declaration" of each built-in
