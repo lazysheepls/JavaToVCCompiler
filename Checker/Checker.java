@@ -228,7 +228,7 @@ public final class Checker implements Visitor {
       // type coersion
       ast.E = intToFloat(ast.E);
     }
-    return null;
+    return true; // return true means function has a return stmt
   }
 
   public Object visitExprStmt(ExprStmt ast, Object o) {
@@ -549,9 +549,19 @@ public final class Checker implements Visitor {
     // ast.I.visit(this, null);
     idTable.openScope();
     ast.PL.visit(this, ast);
-    ast.S.visit(this, ast);
-    idTable.closeScope();
+    Object isRetStmtFound = ast.S.visit(this, ast);
 
+    // Check if return stmt is found in the non-void type function
+    if(!ast.T.isVoidType()) {
+      if (!(isRetStmtFound instanceof Boolean)) {
+        reporter.reportError(errMesg[31], "", ast.position);
+      } else {
+        if (!(Boolean)isRetStmtFound) {
+          reporter.reportError(errMesg[31], "", ast.position);
+        }
+      }
+    }
+    idTable.closeScope();
     // TODO: err[31] compare function return type and return type in the statement 
     return null;
   }
