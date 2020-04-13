@@ -313,11 +313,15 @@ public final class Checker implements Visitor {
       ast.type = StdEnvironment.errorType;
       return ast.type;
     }
-    //TODO: there may be other conditions that could cause scalar error
-    if (e1Type.isArrayType() || e2Type.isArrayType()){ // err[11]: attempt to use an array/fuction as a scalar
+    
+    if (e1Type.isArrayType()){ // err[11]: attempt to use an array/fuction as a scalar
       ast.type = StdEnvironment.errorType;
-      reporter.reportError(errMesg[11], "", ast.position);
-      // return ast.type;
+      reporter.reportError(errMesg[11], "", ast.E1.position);
+    }
+
+    if (e2Type.isArrayType()){ // err[11]: attempt to use an array/fuction as a scalar
+      ast.type = StdEnvironment.errorType;
+      reporter.reportError(errMesg[11], "", ast.E2.position);
     }
 
     switch(ast.O.spelling){
