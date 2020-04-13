@@ -126,13 +126,20 @@ public final class Checker implements Visitor {
   // Statements
   
   public Object visitCompoundStmt(CompoundStmt ast, Object o) {
-    idTable.openScope();
+    boolean isParentFuncDecl = ast.parent instanceof FuncDecl;
+    if (!isParentFuncDecl) {
+      idTable.openScope();
+    } 
+    // idTable.openScope();
 
     // Your code goes here
     ast.DL.visit(this, o);
     ast.SL.visit(this, o);
 
-    idTable.closeScope();
+    if (!isParentFuncDecl) {
+      idTable.closeScope();
+    }
+    // idTable.closeScope();
     return null;
   }
 
@@ -562,7 +569,6 @@ public final class Checker implements Visitor {
       }
     }
     idTable.closeScope();
-    // TODO: err[31] compare function return type and return type in the statement 
     return null;
   }
 
