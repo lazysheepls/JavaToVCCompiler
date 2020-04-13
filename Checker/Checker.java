@@ -7,9 +7,6 @@ package VC.Checker;
 
 import VC.ASTs.*;
 import VC.Scanner.SourcePosition;
-
-import javax.sound.sampled.EnumControl.Type;
-
 import VC.ErrorReporter;
 import VC.StdEnvironment;
 
@@ -148,7 +145,7 @@ public final class Checker implements Visitor {
   }
 
   public Object visitIfStmt(IfStmt ast, Object o) {
-    Type exprType = ast.E.visit(this, o);
+    Type exprType = (Type) ast.E.visit(this, o);
     if (!exprType.isBooleanType()){
       reporter.reportError(errMesg[20] + " %", "(found: " + exprType.toString() + ")", ast.E.position);
     }
@@ -158,21 +155,21 @@ public final class Checker implements Visitor {
   }
 
   public Object visitWhileStmt(WhileStmt ast, Object o) {
-    Type exprType = ast.E.visit(this, o);
+    Type exprType = (Type) ast.E.visit(this, o);
     if(!exprType.isBooleanType()){
       reporter.reportError(errMesg[22] + " %", "(found: " + exprType.toString() + ")", ast.E.position);
     }
-    ast.S.visit(this.o);
+    ast.S.visit(this, o);
     return null;
   }
 
   public Object visitForStmt(ForStmt ast, Object o) {
     Expr e2Expr = ast.E2;
-    Type e2Type = ast.E2.visit(this, o);
+    Type e2Type = (Type) ast.E2.visit(this, o);
 
     if(!e2Expr.isEmptyExpr()) {
       if (!e2Type.isBooleanType()) {
-        reporter.reportError(errMesg[21] + " %", "(found: " + exprType.toString() + ")", ast.E2.position);
+        reporter.reportError(errMesg[21] + " %", "(found: " + e2Expr.toString() + ")", ast.E2.position);
       }
     }
     ast.E1.visit(this, o);
@@ -210,8 +207,8 @@ public final class Checker implements Visitor {
   }
 
   public Object visitReturnStmt(ReturnStmt ast, Object o) {
-    Type funcRetType = (FuncDecl) o.T;
-    Type retExprType = ast.E.visit(this,null);
+    Type funcRetType = ((FuncDecl) o).T;
+    Type retExprType = (Type) ast.E.visit(this,null);
 
     if (ast.E instanceof EmptyExpr) {
       // return type with no expr: function return type should be only be void
@@ -243,6 +240,10 @@ public final class Checker implements Visitor {
     return null;
   }
 
+  public Object visitEmptyCompStmt(EmptyCompStmt ast, Object o) {
+    return null;
+  }
+
   public Object visitEmptyStmtList(EmptyStmtList ast, Object o) {
     return null;
   }
@@ -252,7 +253,7 @@ public final class Checker implements Visitor {
   // Returns the Type denoting the type of the expression. Does
   // not use the given object.
   public Object visitUnaryExpr(UnaryExpr ast, Object o) {
-    Type exprType = ast.E.visit(this, o);
+    Type exprType = (Type) ast.E.visit(this, o);
 
     // Avoid spurious errors
     if(exprType == StdEnvironment.errorType){
@@ -284,7 +285,7 @@ public final class Checker implements Visitor {
         }
         break;
       default:
-        ast.type = StdEnvironment.errorType();
+        ast.type = StdEnvironment.errorType;
         reporter.reportError(errMesg[10] + ": %", ast.O.spelling, ast.position);
         break;
     }
@@ -293,8 +294,8 @@ public final class Checker implements Visitor {
   }
 
   public Object visitBinaryExpr(BinaryExpr ast, Object o) {
-    Type e1Type = ast.E1.visit(this, o);
-    Type e2Type = ast.E2.visit(this, o);
+    Type e1Type = (Type) ast.E1.visit(this, o);
+    Type e2Type = (Type) ast.E2.visit(this, o);
 
     if (e1Type == StdEnvironment.errorType || e2Type == StdEnvironment.errorType) {
       ast.type = StdEnvironment.errorType;
@@ -415,6 +416,16 @@ public final class Checker implements Visitor {
 
   public Object visitInitExpr(InitExpr ast, Object o) {
     //TODO:
+    // InitExpr only used in global-var-decl and local-var-decl (must be array initialiser)
+    //TODO: set array size and err[16]
+    return null;
+  }
+
+  public Object visitExprList(ExprList ast, Object o) {
+    // Expr-list only used in global-var-decl and local-var-decl inside the initialiser (must be array initialiser)
+    // o is the Global/LocalVarDecl
+    //TODO: err[13]
+    return ast;
   }
 
   public Object visitArrayExpr(ArrayExpr ast, Object o) { //FIXME: missing err[12]
@@ -455,8 +466,8 @@ public final class Checker implements Visitor {
     //TODO: void cannot be in the assignment expr
 
     // Known part (std env)
-    boolean isE1StdType = isStdType(e1Type);
-    boolean isE2StdType = isStdType(e2Type);
+    // boolean isE1StdType = isStdType(e1Type);
+    // boolean isE2StdType = isStdType(e2Type);
     
     // Std types check assignable
     if(!e1Type.assignable(e2Type)){
@@ -504,13 +515,16 @@ public final class Checker implements Visitor {
     return ast.type;
   }
 
-  public Object visitCallExpr(CallExpr ast, Object o) {
+  public Object visitCallExpr(CallExpr ast, Object o) { //TODO: err[5], err[29]
     Decl binding = (Decl) ast.I.visit(this, null);
     if (!binding.isFuncDecl()) { // error: use scalar/array as function
       ast.type = StdEnvironment.errorType;
       reporter.reportError(errMesg[19], "", ast.position);
       return ast.type;
     }
+    List paraList = ((FuncDecl) binding).PL; // pass para list all the way down so that is can be checked later
+    ast.AL.visit(this, paraList);
+    return binding.T;
   }
 
   // Declarations
@@ -552,13 +566,14 @@ public final class Checker implements Visitor {
     if (ast.T.isVoidType()) { // error: declared with void type
       reporter.reportError(errMesg[3] + ": %", ast.I.spelling, ast.I.position);
     } else if (ast.T.isArrayType()) {
-      if (((ArrayType)ast.T).T.isVoidType) { // error: declared with void[] type
+      Type arrayPrimaryType = (Type)((ArrayType)ast.T).T;
+      if (arrayPrimaryType.isVoidType()) { // error: declared with void[] type
         reporter.reportError(errMesg[4] + ": %", ast.I.spelling, ast.I.position);
       }
     }
 
     // Check array type global var decl
-    if (ast.T.isArrayType) {
+    if (ast.T.isArrayType()) {
       // No initialiser
       if (ast.E instanceof EmptyExpr) {
           if (((ArrayExpr)ast.E).E.isEmptyExpr()) { // error: array size missing
@@ -577,8 +592,8 @@ public final class Checker implements Visitor {
       if (ast.E instanceof InitExpr) { // error: array initializer for scalar
         reporter.reportError(errMesg[14], "", ast.position);
       }
-
-      if(!ast.T.assignable(((GlobalVarDecl)ast.E).type)) { // error: incompetible type before and after "="
+      Type exprType = (Type) ast.E.visit(this, ast);
+      if(!ast.T.assignable(exprType)) { // error: incompetible type before and after "="
         reporter.reportError(errMesg[6] + ": %", ast.I.spelling, ast.I.position);
       }
     }
@@ -597,13 +612,13 @@ public final class Checker implements Visitor {
       if (ast.T.isVoidType()) { // error: declared with void type
         reporter.reportError(errMesg[3] + ": %", ast.I.spelling, ast.I.position);
       } else if (ast.T.isArrayType()) {
-        if (((ArrayType)ast.T).T.isVoidType) { // error: declared with void[] type
+        if (((ArrayType)ast.T).T.isVoidType()) { // error: declared with void[] type
           reporter.reportError(errMesg[4] + ": %", ast.I.spelling, ast.I.position);
         }
       }
   
       // Check array type local var decl
-      if (ast.T.isArrayType) {
+      if (ast.T.isArrayType()) {
         // No initialiser
         if (ast.E instanceof EmptyExpr) {
             if (((ArrayExpr)ast.E).E.isEmptyExpr()) { // error: array size missing
@@ -622,8 +637,8 @@ public final class Checker implements Visitor {
         if (ast.E instanceof InitExpr) { // error: array initializer for scalar
           reporter.reportError(errMesg[14], "", ast.position);
         }
-  
-        if(!ast.T.assignable(((LocalVarDecl)ast.E).type)) { // error: incompetible type before and after "="
+        Type exprType = (Type) ast.E.visit(this, ast);
+        if(!ast.T.assignable(exprType)) { // error: incompetible type before and after "="
           reporter.reportError(errMesg[6] + ": %", ast.I.spelling, ast.I.position);
         }
       }
@@ -656,12 +671,16 @@ public final class Checker implements Visitor {
     return null;
   }
 
+  public Object visitEmptyExprList(EmptyExprList ast, Object o) {
+    return null;
+  }
+
   public Object visitEmptyParaList(EmptyParaList ast, Object o) {
     return null;
   }
 
   public Object visitEmptyArgList(EmptyArgList ast, Object o) {
-    if (!o instanceof EmptyParaList) { // para-list is passed all the way to this level to compare with the arg-list
+    if (!(o instanceof EmptyParaList)) { // para-list is passed all the way to this level to compare with the arg-list
       reporter.reportError(errMesg[26], "", ast.parent.position);
     } 
     return null;
@@ -681,7 +700,38 @@ public final class Checker implements Visitor {
   }
 
   public Object visitArg(Arg ast, Object o) { //TODO: i2f here
+    // para decl is passed all the way here to compare with arg type
+    Type paraType = ((ParaDecl)o).T;
+    Type exprType = (Type) ast.E.visit(this, null);
 
+    // Avoid spurous errors
+    if (paraType.isErrorType() || exprType.isErrorType()) {
+      ast.type = StdEnvironment.errorType;
+      return ast.type;
+    }
+
+    // Array type: array name itself can used as an arguement in the function call //FIXME: para can be an array, but arg cannot, I think
+    // Diff between para and arg (para is from func decl and arg is passed to the function)
+    if (paraType.isArrayType() && exprType.isArrayType()) {
+      if (!((ArrayType)paraType).T.assignable(((ArrayType)exprType).T)) {
+        reporter.reportError(errMesg[27] + ": %", ((ParaDecl)o).I.spelling, ast.E.position);
+        return StdEnvironment.errorType;
+      }
+    } else {
+      // Non-array type: asssignable and type coersion
+      if (!paraType.assignable(exprType)) {
+        reporter.reportError(errMesg[27] + ": %", "", ast.E.position);
+        ast.type = StdEnvironment.errorType;
+        return StdEnvironment.errorType;
+      } else {
+        if (paraType.isFloatType() && exprType.isIntType()) {
+          ast.E = intToFloat(ast.E);
+        }
+      }
+    }
+
+    ast.type = paraType;
+    return ast.type;
   }
 
   // Types 
@@ -748,7 +798,17 @@ public final class Checker implements Visitor {
 
   // Variables
   public Object visitSimpleVar(SimpleVar ast, Object o) {
-
+    //TODO:
+    Decl binding = (Decl) ast.I.visit(this, null);
+    if (binding == null) {
+      reporter.reportError(errMesg[5] + ": %", ast.I.spelling, ast.position);
+      ast.type = StdEnvironment.errorType;
+      return ast.type;
+    } else {
+      //TODO: err[11] maybe
+    }
+    ast.type = binding.T;
+    return ast.type;
   }
 
   // Creates a small AST to represent the "declaration" of each built-in
