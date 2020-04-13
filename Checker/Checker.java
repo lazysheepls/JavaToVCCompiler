@@ -537,7 +537,8 @@ public final class Checker implements Visitor {
   // Always returns null. Does not use the given object.
 
   public Object visitFuncDecl(FuncDecl ast, Object o) {
-    idTable.insert (ast.I.spelling, ast); 
+    declareVariable(ast.I, ast);
+    // idTable.insert (ast.I.spelling, ast); 
 
     // Your code goes here
 
@@ -546,8 +547,10 @@ public final class Checker implements Visitor {
     // formal parameters of the function an be extracted from ast when the
     // function body is later visited
     // ast.I.visit(this, null);
+    idTable.openScope();
     ast.PL.visit(this, ast);
     ast.S.visit(this, ast);
+    idTable.closeScope();
 
     // TODO: err[31] compare function return type and return type in the statement 
     return null;
