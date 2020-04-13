@@ -4,12 +4,13 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "type": "java",
             "name": "Debug (Launch) with Arguments Prompt",
             "request": "launch",
             "mainClass": "VC.vc",
-            "args": "Parser/t22.vc",
+            "args": "Checker/t1.vc",
             "classPaths": ["/import/ravel/2/z3451444/2020T1/COMP9102"]
         }
     ]

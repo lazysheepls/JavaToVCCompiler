@@ -169,7 +169,7 @@ public final class Checker implements Visitor {
 
     if(!e2Expr.isEmptyExpr()) {
       if (!e2Type.isBooleanType()) {
-        reporter.reportError(errMesg[21] + " %", "(found: " + e2Expr.toString() + ")", ast.E2.position);
+        reporter.reportError(errMesg[21] + " %", "(found: " + e2Type.toString() + ")", ast.E2.position);
       }
     }
     ast.E1.visit(this, o);
@@ -477,7 +477,7 @@ public final class Checker implements Visitor {
 
     // Assigment coersions (int to float)
     if (e1Type.isFloatType() && e2Type.isIntType()){
-      //TODO: insert i2f node
+      ast.E2 = intToFloat(ast.E2);
     }
 
     // Assign type to current ast
@@ -515,11 +515,16 @@ public final class Checker implements Visitor {
     return ast.type;
   }
 
-  public Object visitCallExpr(CallExpr ast, Object o) { //TODO: err[5], err[29]
+  public Object visitCallExpr(CallExpr ast, Object o) { //TODO: err[5](done), err[29]
     Decl binding = (Decl) ast.I.visit(this, null);
+    if (binding == null) { // error: function never declared
+      reporter.reportError(errMesg[5] + ": %", ast.I.spelling, ast.position);
+      ast.type = StdEnvironment.errorType;
+      return ast.type;
+    }
     if (!binding.isFuncDecl()) { // error: use scalar/array as function
       ast.type = StdEnvironment.errorType;
-      reporter.reportError(errMesg[19], "", ast.position);
+      reporter.reportError(errMesg[19] + ": %", ast.I.spelling, ast.I.position);
       return ast.type;
     }
     List paraList = ((FuncDecl) binding).PL; // pass para list all the way down so that is can be checked later
@@ -540,7 +545,7 @@ public final class Checker implements Visitor {
     // Pass ast as the 2nd argument (as done below) so that the
     // formal parameters of the function an be extracted from ast when the
     // function body is later visited
-    ast.I.visit(this, null);
+    // ast.I.visit(this, null);
     ast.PL.visit(this, ast);
     ast.S.visit(this, ast);
 
@@ -693,13 +698,13 @@ public final class Checker implements Visitor {
     if (o instanceof EmptyParaList) { // para-list passed all the way to this level to compare with arg-list
       reporter.reportError(errMesg[25], "", ast.position);
     } else {
-      ast.A.visit(this, null);
-      ast.AL.visit(this, null);
+      ast.A.visit(this, ((ParaList)o).P);
+      ast.AL.visit(this, ((ParaList)o).PL);
     }
     return null;
   }
 
-  public Object visitArg(Arg ast, Object o) { //TODO: i2f here
+  public Object visitArg(Arg ast, Object o) {
     // para decl is passed all the way here to compare with arg type
     Type paraType = ((ParaDecl)o).T;
     Type exprType = (Type) ast.E.visit(this, null);
@@ -720,7 +725,7 @@ public final class Checker implements Visitor {
     } else {
       // Non-array type: asssignable and type coersion
       if (!paraType.assignable(exprType)) {
-        reporter.reportError(errMesg[27] + ": %", "", ast.E.position);
+        reporter.reportError(errMesg[27] + ": %", ((ParaDecl)o).I.spelling, ast.E.position);
         ast.type = StdEnvironment.errorType;
         return StdEnvironment.errorType;
       } else {
