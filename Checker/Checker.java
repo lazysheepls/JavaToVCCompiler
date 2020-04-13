@@ -460,10 +460,10 @@ public final class Checker implements Visitor {
     Type e2Type = (Type) ast.E2.visit(this, o);
 
     // avoid spurous error
-    if(e1Type.isErrorType() || e2Type.isErrorType()){
-      ast.type = StdEnvironment.errorType;
-      return StdEnvironment.errorType;
-    }
+    // if(e1Type.isErrorType() || e2Type.isErrorType()){
+    //   ast.type = StdEnvironment.errorType;
+    //   return StdEnvironment.errorType;
+    // }
 
     //FIXME: Unknown part: arrayExpr, CallExpr, VarExpr (err[7], err[11])
     if (e1Type.isArrayType()|| e2Type.isArrayType()) {
@@ -475,6 +475,17 @@ public final class Checker implements Visitor {
     // Known part (std env)
     // boolean isE1StdType = isStdType(e1Type);
     // boolean isE2StdType = isStdType(e2Type);
+
+    // Check if E1 is a var and E2 is not a var
+    if(!(ast.E1 instanceof VarExpr)) { //FIXME: || ast.E1 instanceof ArrayExpr) * array name can only be used as an arguement, not in assignment
+      reporter.reportError(errMesg[7], "", ast.position);
+      return StdEnvironment.errorType;
+    }
+    // // Check if E2 is not array type (array name can only be used as an arguement, not in assignment) FIXME: Not sure
+    // if (e2Type.isArrayType()) {
+    //   reporter.reportError(errMesg[11], "", ast.position);
+    //   return StdEnvironment.errorType;
+    // }
     
     // Std types check assignable
     if(!e1Type.assignable(e2Type)){
@@ -828,8 +839,12 @@ public final class Checker implements Visitor {
       reporter.reportError(errMesg[5] + ": %", ast.I.spelling, ast.position);
       ast.type = StdEnvironment.errorType;
       return ast.type;
-    } else {
-      //TODO: err[11] maybe
+    } 
+    
+    // TODO: err[11]
+    if (binding instanceof FuncDecl && !(o instanceof ExprStmt)) { //FIXME: is this necessary? //&& !(o instanceof ExprStmt)
+      reporter.reportError(errMesg[11] + ": %", ast.I.spelling, ast.position);
+      return StdEnvironment.errorType;
     }
     ast.type = binding.T;
     return ast.type;
