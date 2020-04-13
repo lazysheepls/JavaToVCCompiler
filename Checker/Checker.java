@@ -543,7 +543,7 @@ public final class Checker implements Visitor {
     // boolean isE2StdType = isStdType(e2Type);
 
     // Check if E1 is a var and E2 is not a var
-    if(!(ast.E1 instanceof VarExpr)) { //FIXME: || ast.E1 instanceof ArrayExpr) * array name can only be used as an arguement, not in assignment
+    if(!(ast.E1 instanceof VarExpr) || ast.E1.type.isErrorType()) { //FIXME: || ast.E1 instanceof ArrayExpr) * array name can only be used as an arguement, not in assignment
       reporter.reportError(errMesg[7], "", ast.position);
       return StdEnvironment.errorType;
     }
