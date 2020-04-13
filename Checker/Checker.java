@@ -291,6 +291,8 @@ public final class Checker implements Visitor {
           reporter.reportError(errMesg[10] + ": %", ast.O.spelling, ast.position);
         }
         break;
+      case "i2f":
+        break;
       default:
         ast.type = StdEnvironment.errorType;
         reporter.reportError(errMesg[10] + ": %", ast.O.spelling, ast.position);
@@ -425,6 +427,26 @@ public final class Checker implements Visitor {
     //TODO:
     // InitExpr only used in global-var-decl and local-var-decl (must be array initialiser)
     //TODO: set array size and err[16]
+    ArrayType arrayType = null;
+    ExprList exprList = (ExprList) ast.IL;
+    //Assign arrayType
+    if (o instanceof GlobalVarDecl){
+      arrayType = (ArrayType) ((GlobalVarDecl)o).T;
+    }
+    if (o instanceof LocalVarDecl){
+      arrayType = (ArrayType) ((LocalVarDecl)o).T;
+    }
+    // Check if initialiser and array size are the same
+    if (arrayType != null && arrayType.E instanceof IntExpr) {
+      Integer arraySize = Integer.valueOf(((IntExpr) arrayType.E).IL.spelling);
+      // System.out.println(arraySize);
+      // System.out.println(exprList.index);
+      if (exprList.index > arraySize) {
+        reporter.reportError(errMesg[16], "", ast.position);
+        return null;
+      }
+    }
+    ast.IL.visit(this, o);
     return null;
   }
 
@@ -432,6 +454,43 @@ public final class Checker implements Visitor {
     // Expr-list only used in global-var-decl and local-var-decl inside the initialiser (must be array initialiser)
     // o is the Global/LocalVarDecl
     //TODO: err[13]
+    // Increment index for the initaliser
+    if (ast.EL instanceof ExprList) {
+      ast.index = ((ExprList)ast.EL.visit(this, o)).index + 1;
+    } else if (ast.EL instanceof EmptyExprList) {
+      ast.index = 1;
+    }
+
+    Type exprType = (Type) ast.E.visit(this, o);
+    // System.out.println(exprType);
+    //Global variable
+    if (o instanceof GlobalVarDecl) {
+      ArrayType arrayType = (ArrayType)((GlobalVarDecl)o).T;
+      // Type arrayPrimaryType = arrayType.T;
+      // System.out.println(arrayType.T);
+      if(!arrayType.T.assignable(exprType)) {
+        reporter.reportError(errMesg[13] + ": at position", Integer.toString(ast.index), ast.E.position);
+        return ast;
+      }
+      // Type coersion inside the initialiser
+      if(arrayType.T.isFloatType() && ast.E.type.isIntType()){
+        ast.E = intToFloat(ast.E);
+      }
+    }
+    // Local variable
+    if (o instanceof LocalVarDecl) {
+      ArrayType arrayType = (ArrayType)((LocalVarDecl)o).T;
+      // Type arrayPrimaryType = arrayType.T;
+      // System.out.println(arrayType.T);
+      if(!arrayType.T.assignable(exprType)) {
+        reporter.reportError(errMesg[13] + ": at position", Integer.toString(ast.index), ast.E.position);
+        return ast;
+      }
+      // Type coersion inside the initialiser
+      if(arrayType.T.isFloatType() && ast.E.type.isIntType()){
+        ast.E = intToFloat(ast.E);
+      }
+    }
     return ast;
   }
 
@@ -602,7 +661,7 @@ public final class Checker implements Visitor {
       reporter.reportError(errMesg[3] + ": %", ast.I.spelling, ast.I.position);
     } else if (ast.T.isArrayType()) {
       if (((ArrayType) ast.T).E instanceof EmptyExpr) {
-        reporter.reportError(errMesg[18], "", ast.position);
+        reporter.reportError(errMesg[18] + ": %", ast.I.spelling, ast.I.position);
         return ast.T;
       } 
       
@@ -625,12 +684,13 @@ public final class Checker implements Visitor {
       if (ast.E instanceof InitExpr) {
         ast.E.visit(this, ast);
       } else { // error: scalar initialize for array
-        reporter.reportError(errMesg[15], "", ast.position);
+        reporter.reportError(errMesg[15] + ": %", ast.I.spelling, ast.position);
       }
     } else {
     // Check non-array type global var decl
       if (ast.E instanceof InitExpr) { // error: array initializer for scalar
-        reporter.reportError(errMesg[14], "", ast.position);
+        reporter.reportError(errMesg[14], "", ast.E.position);
+        return null;
       }
       Type exprType = (Type) ast.E.visit(this, ast);
       if(!ast.T.assignable(exprType)) { // error: incompetible type before and after "="
@@ -653,7 +713,7 @@ public final class Checker implements Visitor {
         reporter.reportError(errMesg[3] + ": %", ast.I.spelling, ast.I.position);
       } else if (ast.T.isArrayType()) {
         if (((ArrayType) ast.T).E instanceof EmptyExpr) {
-          reporter.reportError(errMesg[18], "", ast.position);
+          reporter.reportError(errMesg[18] + ": %", ast.I.spelling, ast.I.position);
           return ast.T;
         } 
         
@@ -676,12 +736,13 @@ public final class Checker implements Visitor {
         if (ast.E instanceof InitExpr) {
           ast.E.visit(this, ast);
         } else { // error: scalar initialize for array
-          reporter.reportError(errMesg[15], "", ast.position);
+          reporter.reportError(errMesg[15] + ": %", ast.I.spelling, ast.position);
         }
       } else {
       // Check non-array type local var decl
         if (ast.E instanceof InitExpr) { // error: array initializer for scalar
-          reporter.reportError(errMesg[14], "", ast.position);
+          reporter.reportError(errMesg[14], "", ast.E.position);
+          return null;
         }
         Type exprType = (Type) ast.E.visit(this, ast);
         if(!ast.T.assignable(exprType)) { // error: incompetible type before and after "="
