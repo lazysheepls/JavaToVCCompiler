@@ -314,7 +314,7 @@ public final class Checker implements Visitor {
     if (e1Type.isArrayType() || e2Type.isArrayType()){ // err[11]: attempt to use an array/fuction as a scalar
       ast.type = StdEnvironment.errorType;
       reporter.reportError(errMesg[11], "", ast.position);
-      return ast.type;
+      // return ast.type;
     }
 
     switch(ast.O.spelling){
@@ -503,7 +503,11 @@ public final class Checker implements Visitor {
       ast.type = StdEnvironment.errorType;
       return ast.type;
     }
-
+    if (!varType.isArrayType()) {
+      reporter.reportError(errMesg[12], "", ast.position);
+      ast.type = StdEnvironment.errorType;
+      return ast.type;
+    }
     if(!exprType.isIntType()) { // error: array subscript is not an integer
       reporter.reportError(errMesg[17], "", ast.position);
       ast.type = StdEnvironment.errorType;
