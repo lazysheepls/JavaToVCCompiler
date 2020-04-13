@@ -77,6 +77,8 @@ public final class Checker implements Visitor {
   private static SourcePosition dummyPos = new SourcePosition();
   private ErrorReporter reporter;
 
+  private boolean isRetStmtFound = false;
+
   // Checks whether the source program, represented by its AST, 
   // satisfies the language's scope rules and type rules.
   // Also decorates the AST as follows:
@@ -235,7 +237,8 @@ public final class Checker implements Visitor {
       // type coersion
       ast.E = intToFloat(ast.E);
     }
-    return true; // return true means function has a return stmt
+    isRetStmtFound = true;
+    return null;
   }
 
   public Object visitExprStmt(ExprStmt ast, Object o) {
@@ -630,17 +633,21 @@ public final class Checker implements Visitor {
     // ast.I.visit(this, null);
     idTable.openScope();
     ast.PL.visit(this, ast);
-    Object isRetStmtFound = ast.S.visit(this, ast);
+    // Object isRetStmtFound = ast.S.visit(this, ast);
+    isRetStmtFound = false;
+    ast.S.visit(this, ast);
+    
 
     // Check if return stmt is found in the non-void type function
     if(!ast.T.isVoidType()) {
-      if (!(isRetStmtFound instanceof Boolean)) {
+      if (!isRetStmtFound)
+      // if (!(isRetStmtFound instanceof Boolean)) {
         reporter.reportError(errMesg[31], "", ast.position);
-      } else {
-        if (!(Boolean)isRetStmtFound) {
-          reporter.reportError(errMesg[31], "", ast.position);
-        }
-      }
+      // } else {
+      //   if (!(Boolean)isRetStmtFound) {
+      //     reporter.reportError(errMesg[31], "", ast.position);
+      //   }
+      // }
     }
     idTable.closeScope();
     return null;
