@@ -601,6 +601,11 @@ public final class Checker implements Visitor {
     if (ast.T.isVoidType()) { // error: declared with void type
       reporter.reportError(errMesg[3] + ": %", ast.I.spelling, ast.I.position);
     } else if (ast.T.isArrayType()) {
+      if (((ArrayType) ast.T).E instanceof EmptyExpr) {
+        reporter.reportError(errMesg[18], "", ast.position);
+        return ast.T;
+      } 
+      
       Type arrayPrimaryType = (Type)((ArrayType)ast.T).T;
       if (arrayPrimaryType.isVoidType()) { // error: declared with void[] type
         reporter.reportError(errMesg[4] + ": %", ast.I.spelling, ast.I.position);
@@ -647,7 +652,13 @@ public final class Checker implements Visitor {
       if (ast.T.isVoidType()) { // error: declared with void type
         reporter.reportError(errMesg[3] + ": %", ast.I.spelling, ast.I.position);
       } else if (ast.T.isArrayType()) {
-        if (((ArrayType)ast.T).T.isVoidType()) { // error: declared with void[] type
+        if (((ArrayType) ast.T).E instanceof EmptyExpr) {
+          reporter.reportError(errMesg[18], "", ast.position);
+          return ast.T;
+        } 
+        
+        Type arrayPrimaryType = (Type)((ArrayType)ast.T).T;
+        if (arrayPrimaryType.isVoidType()) { // error: declared with void[] type
           reporter.reportError(errMesg[4] + ": %", ast.I.spelling, ast.I.position);
         }
       }
