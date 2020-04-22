@@ -18,6 +18,7 @@ import java.util.Enumeration;
 import java.util.ListIterator;
 
 import VC.ASTs.*;
+import jdk.nashorn.internal.runtime.regexp.joni.constants.StringType;
 import VC.ErrorReporter;
 import VC.StdEnvironment;
 
@@ -494,6 +495,14 @@ Object visitReturnStmt(ReturnStmt ast, Object o) {
   }
 
   public Object visitVoidType(VoidType ast, Object o) {
+    return null;
+  }
+
+  public Object visitStringType(StringType ast, Object o) {
+    return null;
+  }
+
+  public Object visitArrayType(ArrayType ast, Object o) {
     return null;
   }
 
