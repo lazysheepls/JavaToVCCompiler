@@ -488,6 +488,15 @@ Object visitReturnStmt(ReturnStmt ast, Object o) {
     return null;
   }
 
+  public Object visitExprList(ExprList ast, Object o) {
+    return null;
+  }
+
+  public Object visitVarExpr(VarExpr ast, Objct o) {
+    ast.V.visit(this, o);
+    return null;
+  }
+
   // Declarations
 
   public Object visitDeclList(DeclList ast, Object o) {
