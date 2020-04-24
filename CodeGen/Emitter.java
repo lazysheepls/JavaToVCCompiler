@@ -317,6 +317,177 @@ Object visitReturnStmt(ReturnStmt ast, Object o) {
     return null;
   }
 
+  public Object visitUnaryExpr(UnaryExpr ast, Object o) {
+    Frame frame = (Frame) o;
+
+    // Push expr on to operand stack
+    ast.E.visit(this, o);
+
+    switch(ast.O.spelling){
+      case "i-":
+        frame.pop();
+        emit(JVM.INEG);
+        frame.push();
+        break;
+      case "f-":
+        frame.pop();
+        emit(JVM.FNEG);
+        frame.push();
+        break;
+      case "i2f":
+        frame.pop();
+        emit(JVM.I2F);
+        frame.push();
+        break;
+      case "i!":
+        String falseLabel = frame.getNewLabel();
+        String nextLabel = frame.getNewLabel();
+
+        frame.pop();
+        // if E is FALSE(0), True -> go to label success
+        emit(JVM.IFEQ, falseLabel); //ifeq succeeds ifff value = 0
+        // invert TRUE(1) to FALSE(0)
+        emit(JVM.ICONST_0);
+        emit(JVM.GOTO, nextLabel);
+
+        //Label:
+        emit(falseLabel + ":");
+        emit(JVM.ICONST_1); // if 0, invert to 1
+
+        //Label:
+        emit(nextLabel + ":");
+        frame.push();
+        break;
+      default:
+        break;
+    }
+    return null;
+  }
+
+  public Object visitBinaryExpr(BinaryExpr ast, Object o){
+    Frame frame = (Frame) o;
+
+    switch(ast.O.spelling){
+      case "i||":
+        String trueLabel = frame.getNewLabel();
+        String nextLabelOR = frame.getNewLabel();
+
+        //if E1 is TRUE
+        ast.E1.visit(this, o);
+        frame.pop();
+        emit(JVM.IFNE, trueLabel);
+        
+        //else if E2 is TRUE
+        ast.E2.visit(this, o);
+        frame.pop();
+        emit(JVM.IFNE, trueLabel);
+
+        //E1 and E2 are both FALSE
+        emit(JVM.ICONST_0);
+        emit(JVM.GOTO, nextLabelOR);
+
+        //Label:
+        emit(trueLabel + ":");
+        emit(JVM.ICONST_1);
+
+        //Label:
+        emit(nextLabelOR + ":");
+        frame.push();
+        break;
+      case "i&&":
+        String falseLabel = frame.getNewLabel();
+        String nextLabelAND = frame.getNewLabel();
+
+        //if E1 is false
+        ast.E1.visit(this, o);
+        frame.pop();
+        emit(JVM.IFEQ, falseLabel);
+
+        //else if E2 is false
+        ast.E2.visit(this, o);
+        frame.pop();
+        emit(JVM.IFEQ, falseLabel);
+
+        //E1 and E2 are both TRUE
+        emit(JVM.ICONST_1);
+        emit(JVM.GOTO, nextLabelAND);
+
+        //Label:
+        emit(falseLabel + ":");
+        emit(JVM.ICONST_0);
+
+        //Label:
+        emit(nextLabelAND + ":");
+        frame.push();
+        break;
+      default:
+        ast.E1.visit(this, o);
+        ast.E2.visit(this, o);
+        switch(ast.O.spelling){
+          case "i+":
+            frame.pop(2);
+            emit(JVM.IADD);
+            frame.push();
+            break;
+          case "i-":
+            frame.pop(2);
+            emit(JVM.ISUB);
+            frame.push();
+            break;
+          case "i*":
+            frame.pop(2);
+            emit(JVM.IMUL);
+            frame.push();
+            break;
+          case "i/":
+            frame.pop(2);
+            emit(JVM.IDIV);
+            frame.push();
+            break;
+          case "f+":
+            frame.pop(2);
+            emit(JVM.FADD);
+            frame.push();
+            break;
+          case "f-":
+            frame.pop(2);
+            emit(JVM.FSUB);
+            frame.push();
+            break;
+          case "f*":
+            frame.pop(2);
+            emit(JVM.FMUL);
+            frame.push();
+            break;
+          case "f/":
+            frame.pop(2);
+            emit(JVM.FDIV);
+            frame.push();
+            break;
+          case "i!=":
+          case "i==":
+          case "i<":
+          case "i<=":
+          case "i>":
+          case "i>=":
+            emitIF_ICMPCOND(ast.O.spelling, frame);
+            break;
+          case "f!=":
+          case "f==":
+          case "f<":
+          case "f<=":
+          case "f>":
+          case "f>=":
+            emitFCMP(ast.O.spelling, frame);
+            break;
+          default:
+            break;
+        }
+        break;
+    }
+    return null;
+  }
+
   // Declarations
 
   public Object visitDeclList(DeclList ast, Object o) {
