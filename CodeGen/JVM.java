@@ -170,7 +170,12 @@ public final class JVM {
    
     DUP = "dup",
     POP = "pop", 
-    NOP = "nop"; 
+    NOP = "nop",
+
+  // Store int/bool/float into array
+    IASTORE = "iastore",
+    BASTORE = "bastore",
+    FASTROE = "fastore";
 
 // Limitations of the JVM 
 

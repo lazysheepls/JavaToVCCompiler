@@ -488,6 +488,39 @@ Object visitReturnStmt(ReturnStmt ast, Object o) {
     return null;
   }
 
+  public Object visitInitExpr(InitExpr ast, Object o) {
+    Frame frame = (Frame) o;
+    List list = ast.IL;
+    Integer index = 0;
+
+    //store each expr in the initialiser into the array
+    while(!list.isEmptyExprList()){
+      Expr expr = 
+      // put array ref onto stack
+      emit(JVM.DUP);
+      frame.push();
+
+      // put index onto stack
+      emitICONST(index);
+      frame.push();
+
+      // put value onto stack
+      ((ExprList) list).E.visit(this, o);
+      
+      // store value to array (int, float, bool)
+      emitXASTORE(ast.type, frame);
+
+      // go to next value
+      list = ((ExprList) list).EL;
+      index++;
+    }
+    return null;
+  }
+
+  public Object visitArrayExpr(ArrayExpr ast, Object o) {
+    return null;
+  }
+
   public Object visitExprList(ExprList ast, Object o) {
     return null;
   }
@@ -899,6 +932,16 @@ Object visitReturnStmt(ReturnStmt ast, Object o) {
       emit(JVM.ICONST_1);
     else
       emit(JVM.ICONST_0);
+  }
+
+  private void emitXASTORE(Type ast, Frame frame) {
+    if (ast.isIntType())
+      emit(JVM.IASTORE);
+    else if (ast.isFloatType())
+      emit(JVM.FASTORE);
+    else if (ast.isBooleanType())
+      emit(JVM.BASTORE);
+    frame.pop(3);
   }
 
   private String VCtoJavaType(Type t) {
