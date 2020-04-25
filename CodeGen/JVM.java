@@ -172,13 +172,17 @@ public final class JVM {
     POP = "pop", 
     NOP = "nop",
 
-  // Store int/bool/float into array
+  // Store value into array
     IASTORE = "iastore",
     BASTORE = "bastore",
-    FASTROE = "fastore";
+    FASTROE = "fastore",
 
+  // Load array value to stack
+    IALOAD = "iaload",
+    BALOAD = "baload",
+    FALOAD = "faload";
+    
 // Limitations of the JVM 
-
   public final static int
     MAX_BYTE = 255,  // 2^8 -1
     MAX_SHORT = 65535, // 2^16 - 1

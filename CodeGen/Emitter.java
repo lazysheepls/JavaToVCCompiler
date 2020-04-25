@@ -518,6 +518,20 @@ Object visitReturnStmt(ReturnStmt ast, Object o) {
   }
 
   public Object visitArrayExpr(ArrayExpr ast, Object o) {
+    Frame frame = (Frame) o;
+    Boolean isRHS = true;
+
+    ast.V.visit(this, frame); // load array-ref  onto stack
+    ast.E.visit(this, frame); // load index onto stack
+
+    // Determine if the arrayExpr is on the right hand side (RHS)
+    // Only load value onto stack if it is RHS
+    if (ast.parent instanceof AssignExpr)
+      isRHS = false;
+
+    if(isRHS)
+      emitXALOAD(ast.type, frame);
+
     return null;
   }
 
@@ -941,7 +955,18 @@ Object visitReturnStmt(ReturnStmt ast, Object o) {
       emit(JVM.FASTORE);
     else if (ast.isBooleanType())
       emit(JVM.BASTORE);
-    frame.pop(3);
+    frame.pop(3); //arrayref, index, value ->
+  }
+
+  private void emitXALOAD(Type ast, Frame frame) {
+    if (ast.isIntType())
+      emit(JVM.IALOAD);
+    else if (ast.isFloatType())
+      emit(JVM.FALOAD);
+    else if (ast.isBooleanType())
+      emit(JVM.BALOAD);
+    frame.pop(2); //arrayref, index ->
+    frame.push(); //value
   }
 
   private String VCtoJavaType(Type t) {
