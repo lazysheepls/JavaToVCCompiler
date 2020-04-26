@@ -18,7 +18,6 @@ import java.util.Enumeration;
 import java.util.ListIterator;
 
 import VC.ASTs.*;
-import jdk.nashorn.internal.runtime.regexp.joni.constants.StringType;
 import VC.ErrorReporter;
 import VC.StdEnvironment;
 
@@ -221,6 +220,20 @@ public final class Emitter implements Visitor {
     frame.conStack.pop();
     frame.brkStack.pop();
 
+    return null;
+  }
+
+  public Object visitBreakStmt(BreakStmt ast, Object o) {
+    Frame frame = (Frame) o;
+    String breakLabel = frame.brkStack.peek();
+    emit(JVM.GOTO, breakLabel);
+    return null;
+  }
+
+  public Object visitContinueStmt(ContinueStmt ast, Object o) {
+    Frame frame = (Frame) o;
+    String contLabel = frame.conStack.peek();
+    emit(JVM.GOTO, contLabel);
     return null;
   }
 
