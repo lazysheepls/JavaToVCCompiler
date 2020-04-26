@@ -180,7 +180,10 @@ public final class JVM {
   // Load array value to stack
     IALOAD = "iaload",
     BALOAD = "baload",
-    FALOAD = "faload";
+    FALOAD = "faload",
+
+  // Create new array
+    NEWARRAY = "newarray";
     
 // Limitations of the JVM 
   public final static int

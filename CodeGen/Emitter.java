@@ -91,17 +91,34 @@ public final class Emitter implements Visitor {
       DeclList dlAST = (DeclList) list;
       if (dlAST.D instanceof GlobalVarDecl) {
         GlobalVarDecl vAST = (GlobalVarDecl) dlAST.D;
-        if (!vAST.E.isEmptyExpr()) {
-          vAST.E.visit(this, frame);
+        if (vAST.T.isArrayType()) { // Global var decl
+          ArrayType arrType = (ArrayType) vAST.T;
+          Type arrayPrimaryType = arrType.T;
+          // put array size onto stack
+          arrType.E.visit(this, o);
+          // decalre new array
+          emit(JVM.NEWARRAY, VCtoJavaType(arrayPrimaryType));
+          //FIXME: not sure about this (maybe for the visitor to continue)
+          if (!vAST.E.isEmptyExpr()) {
+            vAST.E.visit(this, frame);
+          }
+          // store array-ref to static
+          emitPUTSTATIC(arrType.toString(), vAST.I.spelling);
+          frame.pop();
+
         } else {
-          if (vAST.T.equals(StdEnvironment.floatType))
-            emit(JVM.FCONST_0);
-          else
-            emit(JVM.ICONST_0);
-          frame.push();
+          if (!vAST.E.isEmptyExpr()) {
+            vAST.E.visit(this, frame);
+          } else {
+            if (vAST.T.equals(StdEnvironment.floatType))
+              emit(JVM.FCONST_0);
+            else
+              emit(JVM.ICONST_0);
+            frame.push();
+          }
+          emitPUTSTATIC(VCtoJavaType(vAST.T), vAST.I.spelling); 
+          frame.pop();
         }
-        emitPUTSTATIC(VCtoJavaType(vAST.T), vAST.I.spelling); 
-        frame.pop();
       }
       list = dlAST.DL;
     }
@@ -783,29 +800,49 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
   public Object visitLocalVarDecl(LocalVarDecl ast, Object o) {
     Frame frame = (Frame) o;
     ast.index = frame.getNewIndex();
+
+    // .var derectives
     String T = VCtoJavaType(ast.T);
+
+    if (ast.T.isArrayType()){
+      T = ast.T.toString();
+    }
 
     emit(JVM.VAR + " " + ast.index + " is " + ast.I.spelling + " " + T + " from " + (String) frame.scopeStart.peek() + " to " +  (String) frame.scopeEnd.peek());
 
-    if (!ast.E.isEmptyExpr()) {
-      ast.E.visit(this, o);
-  
-      if (ast.T.equals(StdEnvironment.floatType)) {
-        // cannot call emitFSTORE(ast.I) since this I is not an
-        // applied occurrence 
-        if (ast.index >= 0 && ast.index <= 3) 
-          emit(JVM.FSTORE + "_" + ast.index); 
-        else
-          emit(JVM.FSTORE, ast.index); 
-        frame.pop();
-      } else {
-        // cannot call emitISTORE(ast.I) since this I is not an
-        // applied occurrence 
-        if (ast.index >= 0 && ast.index <= 3) 
-          emit(JVM.ISTORE + "_" + ast.index); 
-        else
-          emit(JVM.ISTORE, ast.index); 
-        frame.pop();
+    // array decl
+    if (ast.T.isArrayType()) {
+      ArrayType arrType = ast.T;
+      Type arrPrimaryType = arrType.T;
+      // put array size onto stack
+      arrType.E.visit(this, o);
+      // Create array with type
+      emit(JVM.NEWARRAY, VCtoJavaType(arrPrimaryType));
+      // store array ref to local variable array
+      emitASTORE(ast.index);
+      frame.pop();
+      
+    } else { // scalar decl
+      if (!ast.E.isEmptyExpr()) {
+        ast.E.visit(this, o);
+    
+        if (ast.T.equals(StdEnvironment.floatType)) {
+          // cannot call emitFSTORE(ast.I) since this I is not an
+          // applied occurrence 
+          if (ast.index >= 0 && ast.index <= 3) 
+            emit(JVM.FSTORE + "_" + ast.index); 
+          else
+            emit(JVM.FSTORE, ast.index); 
+          frame.pop();
+        } else {
+          // cannot call emitISTORE(ast.I) since this I is not an
+          // applied occurrence 
+          if (ast.index >= 0 && ast.index <= 3) 
+            emit(JVM.ISTORE + "_" + ast.index); 
+          else
+            emit(JVM.ISTORE, ast.index); 
+          frame.pop();
+        }
       }
     }
 
@@ -825,7 +862,9 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
     ast.index = frame.getNewIndex();
     String T = VCtoJavaType(ast.T);
 
-    //TODO: array type
+    if (ast.T.isArrayType()) {
+      T = ast.T.toString();
+    } 
 
     emit(JVM.VAR + " " + ast.index + " is " + ast.I.spelling + " " + T + " from " + (String) frame.scopeStart.peek() + " to " +  (String) frame.scopeEnd.peek());
     return null;
@@ -1054,6 +1093,13 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
       emit(JVM.ALOAD + "_"  + index); 
     else
       emit(JVM.ALOAD, index); 
+  }
+
+  private void emitASTORE(int index) {
+    if (index >= 0 && index <= 3) 
+      emit(JVM.ASTORE + "_"  + index); 
+    else
+      emit(JVM.ASTORE, index); 
   }
 
   private void emitGETSTATIC(String T, String I) {
