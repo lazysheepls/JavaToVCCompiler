@@ -272,7 +272,7 @@ public final class Emitter implements Visitor {
     return null;
   }
 
-Object visitReturnStmt(ReturnStmt ast, Object o) {
+public Object visitReturnStmt(ReturnStmt ast, Object o) {
     Frame frame = (Frame)o;
 
 /*
@@ -288,7 +288,19 @@ Object visitReturnStmt(ReturnStmt ast, Object o) {
      }
 
 // Your other code goes here
-         
+     ast.E.visit(this, o);
+     if(ast.E.type.isIntType() || ast.E.type.isBooleanType()){
+       emit(JVM.IRETURN);
+     } else if (ast.E.type.isFloatType()) {
+       emit(JVM.FRETURN);
+     }
+
+     return null;
+  }
+
+  public Object visitExprStmt(ExprStmt ast, Object o) {
+    ast.E.visit(this, o);
+    return null;
   }
 
   public Object visitEmptyStmtList(EmptyStmtList ast, Object o) {
