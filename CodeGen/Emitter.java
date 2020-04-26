@@ -138,6 +138,34 @@ public final class Emitter implements Visitor {
     return null;
   }
 
+  public Object visitIfStmt(IfStmt ast, Object o) {
+    Frame frame = (Frame) o;
+
+    String elseLabel = frame.getNewLabel();
+    String nextLabel = frame.getNewLabel();
+
+    ast.E.visit(this, o);
+    frame.pop();
+
+    emit(JVM.IFEQ, elseLabel); // if E == 0, goto else
+
+    // content under if
+    ast.S1.visit(this, o);
+    emit(JVM.GOTO, nextLabel);
+
+    // label:
+    emit(elseLabel + ":");
+    ast.S2.visit(this, o);
+
+    // label:
+    emit(nextLabel + ":");
+    return null;
+  }
+
+  public visitWhileStmt(WhileStmt ast, Object o){
+    return null;
+  }
+
   public Object visitCompoundStmt(CompoundStmt ast, Object o) {
     Frame frame = (Frame) o; 
 
@@ -708,6 +736,8 @@ Object visitReturnStmt(ReturnStmt ast, Object o) {
     Frame frame = (Frame) o;
     ast.index = frame.getNewIndex();
     String T = VCtoJavaType(ast.T);
+
+    //TODO: array type
 
     emit(JVM.VAR + " " + ast.index + " is " + ast.I.spelling + " " + T + " from " + (String) frame.scopeStart.peek() + " to " +  (String) frame.scopeEnd.peek());
     return null;
