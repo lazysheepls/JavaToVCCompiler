@@ -189,7 +189,39 @@ public final class Emitter implements Visitor {
   }
 
   public visitForStmt(ForStmt ast, Object o) {
-    
+    Frame frame = (Frame) o;
+    String startLabel = frame.getNewLabel();
+    String contLabel = frame.getNewLabel();
+    String breakLabel = frame.getNewLabel();
+
+    // push label onto different stack
+    frame.conStack.push(contLabel);
+    frame.brkStack.push(breakLabel);
+
+    ast.E1.visit(this, o); // init condition
+    emit(startLabel + ":");
+
+    if (ast.E2.isEmptyExpr()) {  // When E2 is empty
+      emit(JVM.ICONST_1);
+      frame.push();
+    } else { // When E2 is not empty
+      ast.E2.visit(this, o);
+    }
+
+    emit(JVM.IFEQ, breakLabel);
+    frame.pop();
+
+    ast.S.visit(this, o);
+
+    emit(contLabel + ":");
+    ast.E3.visit(this, o);
+    emit(JVM.GOTO, startLabel);
+
+    emit(breakLabel + ":");
+    frame.conStack.pop();
+    frame.brkStack.pop();
+
+    return null;
   }
 
   public Object visitCompoundStmt(CompoundStmt ast, Object o) {
