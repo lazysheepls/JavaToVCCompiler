@@ -980,6 +980,8 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
         emitALOAD(decl.index);
       }
     }
+
+    frame.push();
     return null;
   }
 
@@ -990,6 +992,8 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
 
   private void emit(String s) {
     JVM.append(new Instruction(s)); 
+    //FIXME: Remove afte debugging
+    System.out.println(s);
   }
 
   private void emit(String s1, String s2) {

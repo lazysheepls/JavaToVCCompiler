@@ -10,7 +10,7 @@
             "name": "Debug (Launch) with Arguments Prompt",
             "request": "launch",
             "mainClass": "VC.vc",
-            "args": "Checker/t2.vc",
+            "args": "CodeGen/max.vc",
             "classPaths": ["/import/ravel/2/z3451444/2020T1/COMP9102"]
         }
     ]
