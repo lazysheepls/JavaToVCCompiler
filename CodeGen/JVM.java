@@ -175,7 +175,7 @@ public final class JVM {
   // Store value into array
     IASTORE = "iastore",
     BASTORE = "bastore",
-    FASTROE = "fastore",
+    FASTORE = "fastore",
 
   // Load array value to stack
     IALOAD = "iaload",

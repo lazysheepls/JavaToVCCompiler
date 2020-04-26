@@ -18,7 +18,6 @@ import java.util.Enumeration;
 import java.util.ListIterator;
 
 import VC.ASTs.*;
-import jdk.jfr.internal.JVM;
 import VC.ErrorReporter;
 import VC.StdEnvironment;
 
@@ -179,7 +178,7 @@ public final class Emitter implements Visitor {
     return null;
   }
 
-  public visitWhileStmt(WhileStmt ast, Object o){
+  public Object visitWhileStmt(WhileStmt ast, Object o){
     Frame frame = (Frame) o;
     String contLabel = frame.getNewLabel();
     String breakLabel = frame.getNewLabel();
@@ -205,7 +204,7 @@ public final class Emitter implements Visitor {
     return null;
   }
 
-  public visitForStmt(ForStmt ast, Object o) {
+  public Object visitForStmt(ForStmt ast, Object o) {
     Frame frame = (Frame) o;
     String startLabel = frame.getNewLabel();
     String contLabel = frame.getNewLabel();
@@ -628,7 +627,6 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
 
     //store each expr in the initialiser into the array
     while(!list.isEmptyExprList()){
-      Expr expr = 
       // put array ref onto stack
       emit(JVM.DUP);
       frame.push();
@@ -699,7 +697,7 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
     return null;
   }
 
-  public Object visitVarExpr(VarExpr ast, Objct o) {
+  public Object visitVarExpr(VarExpr ast, Object o) {
     ast.V.visit(this, o);
     return null;
   }
@@ -812,7 +810,7 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
 
     // array decl
     if (ast.T.isArrayType()) {
-      ArrayType arrType = ast.T;
+      ArrayType arrType = (ArrayType) ast.T;
       Type arrPrimaryType = arrType.T;
       // put array size onto stack
       arrType.E.visit(this, o);
@@ -964,7 +962,7 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
   public Object visitSimpleVar(SimpleVar ast, Object o) {
     Frame frame = (Frame) o;
     Ident id = ast.I;
-    Decl decl = ast.I.decl;
+    Decl decl = (Decl) ast.I.decl;
 
     if (decl instanceof GlobalVarDecl) {
       //FIXME: not sure about T and I
