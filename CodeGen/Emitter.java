@@ -311,7 +311,7 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
      } else if (ast.E.type.isFloatType()) {
        emit(JVM.FRETURN);
      }
-
+     frame.pop();
      return null;
   }
 
@@ -680,15 +680,14 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
       Ident id = ((SimpleVar) ((VarExpr) ast.E1).V).I;
       Decl decl = (Decl) id.decl;
       if(decl instanceof GlobalVarDecl){
-        //FIXME: not sure about T and I
         emitPUTSTATIC(VCtoJavaType(decl.T), id.spelling); 
       } else { //local var
         if (ast.E2.type.isIntType() || ast.E2.type.isBooleanType())
           emitISTORE(id);
         else if (ast.E2.type.isFloatType())
           emitFSTORE(id);
-        frame.pop();
       }
+      frame.pop();
     }
     return null;
   }
