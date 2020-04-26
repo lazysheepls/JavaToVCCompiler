@@ -18,6 +18,7 @@ import java.util.Enumeration;
 import java.util.ListIterator;
 
 import VC.ASTs.*;
+import jdk.jfr.internal.JVM;
 import VC.ErrorReporter;
 import VC.StdEnvironment;
 
@@ -304,6 +305,10 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
   }
 
   public Object visitEmptyStmtList(EmptyStmtList ast, Object o) {
+    return null;
+  }
+
+  public Object visitEmptyExprList(EmptyExprList ast, Object o) {
     return null;
   }
 
@@ -918,6 +923,26 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
   // Variables 
 
   public Object visitSimpleVar(SimpleVar ast, Object o) {
+    Frame frame = (Frame) o;
+    Ident id = ast.I;
+    Decl decl = ast.I.decl;
+
+    if (decl instanceof GlobalVarDecl) {
+      //FIXME: not sure about T and I
+      if (ast.type.isArrayType()) {
+        emitGETSTATIC(ast.type.toString(), id.spelling);
+      } else {
+        emitGETSTATIC(VCtoJavaType(decl.T), id.spelling);
+      }
+    } else { //LocalVar or Parameter
+      if (ast.type.isIntType() || ast.type.isBooleanType()) {
+        emitILOAD(decl.index);
+      } else if (ast.type.isFloatType()) {
+        emitFLOAD(decl.index);
+      } else if (ast.type.isArrayType()) {
+        emitALOAD(decl.index);
+      }
+    }
     return null;
   }
 
@@ -1022,6 +1047,13 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
       emit(JVM.FLOAD + "_"  + index); 
     else
       emit(JVM.FLOAD, index); 
+  }
+
+  private void emitALOAD(int index) {
+    if (index >= 0 && index <= 3) 
+      emit(JVM.ALOAD + "_"  + index); 
+    else
+      emit(JVM.ALOAD, index); 
   }
 
   private void emitGETSTATIC(String T, String I) {
