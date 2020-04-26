@@ -163,7 +163,33 @@ public final class Emitter implements Visitor {
   }
 
   public visitWhileStmt(WhileStmt ast, Object o){
+    Frame frame = (Frame) o;
+    String contLabel = frame.getNewLabel();
+    String breakLabel = frame.getNewLabel();
+
+    // push label onto different stack
+    frame.conStack.push(contLabel);
+    frame.brkStack.push(breakLabel);
+
+    emit(contLabel + ":");
+    ast.E.visit(this, o);
+    frame.pop();
+
+    // label:
+    emit(JVM.IFEQ, breakLabel);
+    ast.S.visit(this, o);
+    emit(JVM.GOTO, contLabel);
+
+    // label:
+    emit(breakLabel + ":");
+    frame.conStack.pop();
+    frame.brkStack.pop();
+    
     return null;
+  }
+
+  public visitForStmt(ForStmt ast, Object o) {
+    
   }
 
   public Object visitCompoundStmt(CompoundStmt ast, Object o) {
