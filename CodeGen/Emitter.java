@@ -676,9 +676,22 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
     if (ast.E1 instanceof ArrayExpr) {
       ast.E1.visit(this, o); // get array-ref and index
       ast.E2.visit(this, o); // get value
+
+      // if parent is still assignment expr, duplicate (lect8-2 p470)
+      if (ast.parent instanceof AssignExpr) {
+        frame.push();
+        emit(JVM.DUP);
+      }
+
       emitXASTORE(ast.E2.type, frame); // store value to array
     } else {
       ast.E2.visit(this, o); // put value on stack
+
+      // if parent is still assignment expr, duplicate (lect8-2 p470)
+      if (ast.parent instanceof AssignExpr) {
+        frame.push();
+        emit(JVM.DUP);
+      }
 
       //Check if E1 is a gobal var
       Ident id = ((SimpleVar) ((VarExpr) ast.E1).V).I;
