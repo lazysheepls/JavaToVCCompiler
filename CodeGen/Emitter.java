@@ -97,7 +97,6 @@ public final class Emitter implements Visitor {
           arrType.E.visit(this, frame);
           // decalre new array
           emit(JVM.NEWARRAY, VCtoJavaType(arrayPrimaryType));
-          //FIXME: not sure about this (maybe for the visitor to continue)
 
           if (!vAST.E.isEmptyExpr()) {
             vAST.E.visit(this, frame);
@@ -981,7 +980,6 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
     Decl decl = (Decl) ast.I.decl;
 
     if (decl instanceof GlobalVarDecl) {
-      //FIXME: not sure about T and I
       if (ast.type.isArrayType()) {
         emitGETSTATIC(ast.type.toString(), id.spelling);
       } else {
