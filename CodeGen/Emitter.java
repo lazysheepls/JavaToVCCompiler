@@ -310,10 +310,11 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
      ast.E.visit(this, o);
      if(ast.E.type.isIntType() || ast.E.type.isBooleanType()){
        emit(JVM.IRETURN);
+       frame.pop();
      } else if (ast.E.type.isFloatType()) {
        emit(JVM.FRETURN);
+       frame.pop();
      }
-     frame.pop();
      return null;
   }
 
