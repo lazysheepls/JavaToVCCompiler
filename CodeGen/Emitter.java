@@ -94,13 +94,15 @@ public final class Emitter implements Visitor {
           ArrayType arrType = (ArrayType) vAST.T;
           Type arrayPrimaryType = arrType.T;
           // put array size onto stack
-          arrType.E.visit(this, o);
+          arrType.E.visit(this, frame);
           // decalre new array
           emit(JVM.NEWARRAY, VCtoJavaType(arrayPrimaryType));
           //FIXME: not sure about this (maybe for the visitor to continue)
+
           if (!vAST.E.isEmptyExpr()) {
             vAST.E.visit(this, frame);
           }
+
           // store array-ref to static
           emitPUTSTATIC(arrType.toString(), vAST.I.spelling);
           frame.pop();
@@ -624,6 +626,7 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
     Frame frame = (Frame) o;
     List list = ast.IL;
     Integer index = 0;
+    Type arrayPrimaryType = ((ArrayType) ((Decl) ast.parent).T).T;
 
     //store each expr in the initialiser into the array
     while(!list.isEmptyExprList()){
@@ -637,9 +640,9 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
 
       // put value onto stack
       ((ExprList) list).E.visit(this, o);
-      
+
       // store value to array (int, float, bool)
-      emitXASTORE(ast.type, frame);
+      emitXASTORE(arrayPrimaryType, frame);
 
       // go to next value
       list = ((ExprList) list).EL;
@@ -1174,6 +1177,7 @@ public Object visitReturnStmt(ReturnStmt ast, Object o) {
       emit(JVM.FASTORE);
     else if (ast.isBooleanType())
       emit(JVM.BASTORE);
+
     frame.pop(3); //arrayref, index, value ->
   }
 
