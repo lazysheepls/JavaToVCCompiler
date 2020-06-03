@@ -3,9 +3,13 @@ A functional Java to VC compiler
 
 # Implementation
 scanner: read characters and produces tokens
+
 recogniser: read tokens and parse the program only for syntactic correctness
+
 parser: extend the parser to build an abstract syntax tree (AST)
+
 static semantics: check semantics at compile-time
+
 code generator -- generate Java bytecode (Java assembly to be more correct)
 
 # Waht is VC?
